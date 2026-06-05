@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Burrinho de Dominó - Eu contra a IA</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 16px;
+    font-family: system-ui, sans-serif;
+    background: #0d3b1e; color: #fff; text-align: center;
+    min-height: 100vh;
+  }
+  h1 { margin: 4px 0; }
+  .sub { color: #a5d6a7; font-size: 13px; margin-bottom: 14px; }
+  .label { font-size: 12px; letter-spacing: 1px; color: #a5d6a7; margin: 10px 0 6px; }
+
+  .row { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; min-height: 56px; align-items: center; }
+  .board { background: #07491f; border-radius: 10px; padding: 14px; margin: 10px auto; max-width: 820px; box-shadow: inset 0 0 14px rgba(0,0,0,.5); }
+
+  /* peça de dominó */
+  .domino {
+    display: inline-flex; background: #fdf6e3; color: #222;
+    border-radius: 6px; box-shadow: 0 2px 4px rgba(0,0,0,.4);
+    overflow: hidden; border: 1px solid #ccc;
+  }
+  .domino .half {
+    width: 30px; height: 46px; display: flex; align-items: center; justify-content: center;
+    font-size: 20px; font-weight: bold;
+  }
+  .domino .half:first-child { border-right: 2px solid #333; }
+
+  /* peças da sua mão clicáveis */
+  .hand .domino { cursor: pointer; transition: transform .1s; }
+  .hand .domino:hover { transform: translateY(-5px); }
+  .domino.playable { outline: 3px solid #ffca28; }
+  .domino.selected { transform: translateY(-8px); outline: 3px solid #ff7043; }
+
+  /* peça da IA escondida */
+  .domino.back { background: #283593; }
+  .domino.back .half { color: #283593; }
+  .domino.back .half:first-child { border-right-color: #1a237e; }
+
+  #status { margin: 16px auto; font-size: 17px; font-weight: bold; min-height: 22px; }
+  .controls { margin: 10px; }
+  button {
+    background: #ffca28; color: #222; border: none;
+    padding: 9px 20px; border-radius: 22px; font-size: 15px; font-weight: bold;
+    cursor: pointer; margin: 4px;
+  }
+  button:hover { background: #ffd54f; }
+  button:disabled { background: #6d6d6d; color: #bbb; cursor: not-allowed; }
+  .endbtns button { background: #ff7043; color: #fff; }
+  .endbtns button:hover { background: #ff8a65; }
+</style>
+</head>
+<body>
+  <h1>🁫 Burrinho de Dominó</h1>
+  <div class="sub">Eu contra a IA — quem ficar sem peças primeiro vence!</div>
+
+  <div class="label">IA <span id="ai-count"></span></div>
+  <div id="ai-hand" class="row"></div>
+
+  <div class="board">
+    <div class="label">MESA</div>
+    <div id="board" class="row"></div>
+  </div>
+
+  <div id="status">Sua vez!</div>
+  <div class="controls">
+    <span id="endbtns" class="endbtns"></span>
+    <button id="draw">Comprar do monte</button>
+    <button id="pass" style="display:none">Passar</button>
+    <button id="restart" style="display:none">Jogar de novo</button>
+  </div>
+
+  <div class="label">SUAS PEÇAS</div>
+  <div id="your-hand" class="row"></div>
+  <div class="sub">Monte: <span id="boneyard-count"></span> peças restantes</div>
+
+<script>
+let boneyard, you, ai, board, selected, gameOver, yourTurn;
+
+function novoJogo() {
+  // cria as 28 peças do dominó (0-0 até 6-6)
+  const tiles = [];
+  for (let a = 0; a <= 6; a++)
+    for (let b = a; b <= 6; b++)
+      tiles.push([a, b]);
+  embaralhar(tiles);
+
+  you = tiles.splice(0, 7);
+  ai = tiles.splice(0, 7);
+  boneyard = tiles;
+  board = [];          // sequência na mesa: cada item [esq, dir] já orientado
+  selected = null;
+  gameOver = false;
+  yourTurn = true;
+
+  document.getElementById("restart").style.display = "none";
+  setStatus("Sua vez! Jogue uma peça (ou comece com qualquer uma).");
+  render();
+}
+
+function embaralhar(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+}
+
+// extremidades abertas da mesa
+function pontaEsq() { return board.length ? board[0][0] : null; }
+function pontaDir() { return board.length ? board[board.length - 1][1] : null; }
+
+// onde a peça pode entrar: retorna {esq, dir} booleanos
+function ondePoceJogar(tile) {
+  if (board.length === 0) return { esq: true, dir: true };
+  const [a, b] = tile, le = pontaEsq(), re = pontaDir();
+  return {
+    esq: a === le || b === le,
+    dir: a === re || b === re,
+  };
+}
+
+function temJogada(mao) {
+  return mao.some(t => { const p = ondePoceJogar(t); return p.esq || p.dir; });
+}
+
+function colocar(tile, lado) {
+  if (board.length === 0) { board.push([tile[0], tile[1]]); return; }
+  const [a, b] = tile;
+  if (lado === "esq") {
+    const le = pontaEsq();
+    board.unshift(b === le ? [a, b] : [b, a]); // o valor que conecta fica à direita
+  } else {
+    const re = pontaDir();
+    board.push(a === re ? [a, b] : [b, a]);    // o valor que conecta fica à esquerda
+  }
+}
+
+function setStatus(t) { document.getElementById("status").textContent = t; }
+
+// ---------- jogada do jogador ----------
+function clicarPeca(idx) {
+  if (gameOver || !yourTurn) return;
+  const tile = you[idx];
+  const p = ondePoceJogar(tile);
+  if (!p.esq && !p.dir) return; // peça não joga
+
+  selected = idx;
+  render();
+
+  // se só cabe num lado, joga direto; se cabe nos dois, mostra botões
+  if (p.esq && p.dir && board.length > 0) {
+    const div = document.getElementById("endbtns");
+    div.innerHTML = "";
+    const be = document.createElement("button"); be.textContent = "◀ Esquerda";
+    be.onclick = () => jogarVoce(idx, "esq");
+    const bd = document.createElement("button"); bd.textContent = "Direita ▶";
+    bd.onclick = () => jogarVoce(idx, "dir");
+    div.appendChild(be); div.appendChild(bd);
+  } else {
+    jogarVoce(idx, p.esq ? "esq" : "dir");
+  }
+}
+
+function jogarVoce(idx, lado) {
+  document.getElementById("endbtns").innerHTML = "";
+  const tile = you.splice(idx, 1)[0];
+  colocar(tile, lado);
+  selected = null;
+
+  if (you.length === 0) { fim("🎉 Você venceu! Ficou sem peças!"); return; }
+
+  yourTurn = false;
+  setStatus("Vez da IA...");
+  render();
+  setTimeout(jogarIA, 700);
+}
+
+function comprar() {
+  if (gameOver || !yourTurn) return;
+  if (boneyard.length === 0) return;
+  you.push(boneyard.shift());
+  render();
+  atualizarBotoes();
+}
+
+function passar() {
+  if (gameOver || !yourTurn) return;
+  yourTurn = false;
+  setStatus("Você passou. Vez da IA...");
+  render();
+  setTimeout(jogarIA, 700);
+}
+
+// ---------- jogada da IA ----------
+function jogarIA() {
+  if (gameOver) return;
+
+  // compra enquanto não tiver jogada
+  while (!temJogada(ai) && boneyard.length > 0) {
+    ai.push(boneyard.shift());
+  }
+
+  if (!temJogada(ai)) {
+    // IA passa — se você também não tem jogada nem compra, jogo trava
+    if (!temJogada(you) && boneyard.length === 0) { travou(); return; }
+    yourTurn = true;
+    setStatus("A IA passou. Sua vez!");
+    render();
+    atualizarBotoes();
+    return;
+  }
+
+  // escolhe a peça jogável de maior soma de pontos
+  let melhor = -1, melhorLado = null, melhorVal = -1;
+  for (let i = 0; i < ai.length; i++) {
+    const p = ondePoceJogar(ai[i]);
+    if (!p.esq && !p.dir) continue;
+    const val = ai[i][0] + ai[i][1];
+    if (val > melhorVal) { melhorVal = val; melhor = i; melhorLado = p.dir ? "dir" : "esq"; }
+  }
+
+  const tile = ai.splice(melhor, 1)[0];
+  colocar(tile, melhorLado);
+
+  if (ai.length === 0) { fim("🤖 A IA venceu! Tente de novo."); return; }
+
+  yourTurn = true;
+  setStatus("Sua vez!");
+  render();
+  atualizarBotoes();
+}
+
+// ---------- fim de jogo ----------
+function fim(msg) {
+  gameOver = true;
+  setStatus(msg);
+  document.getElementById("draw").style.display = "none";
+  document.getElementById("pass").style.display = "none";
+  document.getElementById("restart").style.display = "inline-block";
+  render();
+}
+
+function travou() {
+  const somaVoce = you.reduce((s, t) => s + t[0] + t[1], 0);
+  const somaIA = ai.reduce((s, t) => s + t[0] + t[1], 0);
+  let msg = `🔒 Jogo travado! Você: ${somaVoce} pts, IA: ${somaIA} pts. `;
+  if (somaVoce < somaIA) msg += "Você venceu (menos pontos)! 🎉";
+  else if (somaIA < somaVoce) msg += "A IA venceu (menos pontos). 🤖";
+  else msg += "Empate!";
+  fim(msg);
+}
+
+// ---------- botões de comprar/passar ----------
+function atualizarBotoes() {
+  const drawBtn = document.getElementById("draw");
+  const passBtn = document.getElementById("pass");
+  if (gameOver || !yourTurn) { drawBtn.disabled = true; passBtn.style.display = "none"; return; }
+
+  const podeJogar = temJogada(you);
+  if (podeJogar) {
+    drawBtn.disabled = true;
+    passBtn.style.display = "none";
+  } else if (boneyard.length > 0) {
+    drawBtn.disabled = false;          // precisa comprar
+    passBtn.style.display = "none";
+    setStatus("Sem jogada! Compre do monte.");
+  } else {
+    drawBtn.disabled = true;
+    passBtn.style.display = "inline-block";  // não tem o que comprar: passa
+    setStatus("Sem jogada e sem monte. Passe a vez.");
+  }
+}
+
+// ---------- desenho ----------
+function fazerDomino(a, b, classe = "") {
+  return `<div class="domino ${classe}"><div class="half">${a}</div><div class="half">${b}</div></div>`;
+}
+
+function render() {
+  document.getElementById("ai-count").textContent = `(${ai.length})`;
+  document.getElementById("boneyard-count").textContent = boneyard.length;
+
+  // IA (escondida)
+  document.getElementById("ai-hand").innerHTML =
+    ai.map(() => fazerDomino("?", "?", "back")).join("");
+
+  // mesa
+  document.getElementById("board").innerHTML =
+    board.length ? board.map(t => fazerDomino(t[0], t[1])).join("")
+                 : '<span style="color:#5a8c6a">(vazia)</span>';
+
+  // sua mão
+  const yh = document.getElementById("your-hand");
+  yh.innerHTML = "";
+  you.forEach((t, i) => {
+    const p = ondePoceJogar(t);
+    const jogavel = (yourTurn && !gameOver && (p.esq || p.dir)) ? "playable" : "";
+    const sel = i === selected ? "selected" : "";
+    const wrap = document.createElement("div");
+    wrap.innerHTML = fazerDomino(t[0], t[1], `${jogavel} ${sel}`);
+    const el = wrap.firstChild;
+    el.onclick = () => clicarPeca(i);
+    yh.appendChild(el);
+  });
+
+  atualizarBotoes();
+}
+
+document.getElementById("draw").onclick = comprar;
+document.getElementById("pass").onclick = passar;
+document.getElementById("restart").onclick = novoJogo;
+novoJogo();
+</script>
+</body>
+</html>
