@@ -188,12 +188,12 @@
 
   <div id="float"></div>
 
-  <!-- LOJA -->
+  <!-- RECOMPENSA: escolha 1 joker grátis -->
   <div class="overlay" id="shop">
-    <h2 id="shop-title">🛒 Loja</h2>
-    <div class="hint">Você tem <b>$<span id="shop-money">0</span></b>. Jokers e Poderes valem a run inteira.</div>
+    <h2 id="shop-title">🎁 Recompensa</h2>
+    <div class="hint">Escolha <b>1 joker grátis</b> dos 3 abaixo. Valem a run inteira.</div>
     <div class="shop-items" id="shop-items"></div>
-    <button id="next">Próxima fase ▶</button>
+    <button id="next">Pular ▶</button>
   </div>
   <!-- FIM -->
   <div class="overlay" id="end">
@@ -232,7 +232,7 @@
     <h2>📦 Limite cheio</h2>
     <div class="hint" id="limit-msg"></div>
     <div class="shop-items" id="limit-items"></div>
-    <button id="limit-discard" class="danger">Descartar (não gasta $)</button>
+    <button id="limit-discard" class="danger">Descartar</button>
   </div>
 
   <!-- TROCAR GATO POR LEBRE -->
@@ -268,35 +268,43 @@
   <div class="dbg-hint">F = jokers (debug) · G = config de balanceamento</div>
 
 <script>
-/* ===== poderes (cartas que ficam a run inteira) ===== */
+/* ===== jokers de efeito global (ficam a run inteira) ===== */
 const ALL_POWERS=[
-  {id:"cachaca", name:"Cachaça",          desc:"+2 de Mult base.",price:5},
-  {id:"carroca", name:"Carroça Dourada",  desc:"Jogar uma carroça (dupla) dá +3 Mult naquela jogada.",price:5},
-  {id:"mare",    name:"Maré",             desc:"Cada pedra jogada vale +1 Ficha.",price:4},
-  {id:"maocheia",name:"Mão Cheia",        desc:"Toda vez que você esvazia a mão: +1 Mult na fase.",price:6},
-  {id:"file",    name:"Filé da Rendeira", desc:"Pedras com um 6 valem o dobro de Fichas.",price:6},
-  {id:"jangada", name:"Jangada",          desc:"+1 rodada no início de cada fase.",price:5},
+  {id:"cachaca", name:"Cachaça",          desc:"+2 de Mult base.",kind:"power"},
+  {id:"carroca", name:"Carroça Dourada",  desc:"Jogar uma carroça (dupla) dá +3 Mult naquela jogada.",kind:"power"},
+  {id:"mare",    name:"Maré",             desc:"Cada pedra jogada vale +1 Ficha.",kind:"power"},
+  {id:"maocheia",name:"Mão Cheia",        desc:"Toda vez que você esvazia a mão: +1 Mult na fase.",kind:"power"},
+  {id:"file",    name:"Filé da Rendeira", desc:"Pedras com um 6 valem o dobro de Fichas.",kind:"power"},
+  {id:"jangada", name:"Jangada",          desc:"+1 rodada no início de cada fase.",kind:"power"},
 ];
 const has=id=>powers.some(p=>p.id===id);
 
 /* ===== JOKERS por tipo de pedra =====
-   Tipos: 1=Piu, 2=Duque, 3=Terno, 4=Quadra, 5=Quina, 6=Sena.
+   Tipos: 0=Branco, 1=Piu, 2=Duque, 3=Terno, 4=Quadra, 5=Quina, 6=Sena.
    Cada pedra tem 2 metades, então o joker vale se a peça TIVER aquele tipo
-   em pelo menos uma das metades. 2 jokers por tipo = 12 no total.
-   - kind "add":  +5 fichas quando a peça tem o tipo.
+   em pelo menos uma das metades. 2 jokers por tipo = 14 no total.
+   - kind "add":  +5 fichas quando a peça tem o tipo (ex.: cada branco jogado dá +5).
    - kind "mult": dobra os pontos da jogada quando a peça tem o tipo. */
-const TIPOS=[[1,"Piu"],[2,"Duque"],[3,"Terno"],[4,"Quadra"],[5,"Quina"],[6,"Sena"]];
+const TIPOS=[[0,"Branco"],[1,"Piu"],[2,"Duque"],[3,"Terno"],[4,"Quadra"],[5,"Quina"],[6,"Sena"]];
 const TIPO_JOKERS=[];
 TIPOS.forEach(([n,nome])=>{
-  TIPO_JOKERS.push({id:"add"+n, name:"+5 "+nome,      desc:"+5 fichas se a peça tiver "+n+".",     kind:"add",  tipo:n, price:5});
-  TIPO_JOKERS.push({id:"mult"+n,name:nome+" em Dobro",desc:"Dobra os pontos se a peça tiver "+n+".",kind:"mult", tipo:n, price:6});
+  TIPO_JOKERS.push({id:"add"+n, name:"+5 "+nome,      desc:"+5 fichas se a peça tiver "+n+".",     kind:"add",  tipo:n});
+  TIPO_JOKERS.push({id:"mult"+n,name:nome+" em Dobro",desc:"Dobra os pontos se a peça tiver "+n+".",kind:"mult", tipo:n});
 });
 const tileTem=(t,n)=>t[0]===n||t[1]===n;
 
 /* ===== jokers especiais do GATO POR LEBRE (desbloqueados no 1º resultado) ===== */
 const GATO_JOKERS=[
-  {id:"petisca",name:"Quem não arrisca não petisca",desc:"Quando seu gato por lebre pontua: +2 de Mult naquela jogada.",price:6,kind:"special",gatoMult:2},
-  {id:"blefe",  name:"Mestre do Blefe",             desc:"Aumenta a chance do gato por lebre para 50%.",         price:7,kind:"special",gatoBonus:0.25},
+  {id:"petisca",name:"Quem não arrisca não petisca",desc:"Quando seu gato por lebre pontua: +2 de Mult naquela jogada.",kind:"special",gatoMult:2},
+  {id:"blefe",  name:"Mestre do Blefe",             desc:"Aumenta a chance do gato por lebre para 50%.",         kind:"special",gatoBonus:0.25},
+];
+/* ===== jokers de EFEITO DE CAMPO (reagem ao estado da mesa) =====
+   "lá e lô" = as duas pontas abertas têm o mesmo número (isLaELo()).
+   "bomba"   = carroça / peça dupla (isDouble()). */
+const CAMPO_JOKERS=[
+  {id:"laelo10",name:"Lá e Lô Premiado",  desc:"Se a sua jogada DEIXAR a mesa em lá e lô (pontas iguais): +10 pontos.",kind:"campo"},
+  {id:"bombalo",name:"Bomba na Maré",     desc:"Jogar uma bomba (carroça) com a mesa já em lá e lô: +5 de Mult.",     kind:"campo"},
+  {id:"lalo5",  name:"Embalo do Lá e Lô", desc:"Jogar qualquer peça com a mesa já em lá e lô: +5 pontos.",            kind:"campo"},
 ];
 let unlocked={petisca:false,blefe:false};   // persistem na sessão (não resetam a cada run)
 let pendingUnlocks=[],afterUnlock=null;     // jokers desbloqueados na fase atual → mostrados no fim
@@ -304,7 +312,7 @@ let pendingUnlocks=[],afterUnlock=null;     // jokers desbloqueados na fase atua
 function unlock(id){
   if(unlocked[id])return;
   unlocked[id]=true;
-  const j=[...GATO_JOKERS,...ALL_POWERS,...TIPO_JOKERS].find(x=>x.id===id);
+  const j=[...GATO_JOKERS,...ALL_POWERS,...TIPO_JOKERS,...CAMPO_JOKERS].find(x=>x.id===id);
   if(j)pendingUnlocks.push(j);
 }
 /* mostra o modal de desbloqueios (se houver) e DEPOIS roda a ação (loja/fim) */
@@ -326,7 +334,7 @@ function closeUnlock(){
 
 /* ===== config de balanceamento (modal tecla G) ===== */
 let CFG={maxJokers:5,maxPoderes:5,lives:3,autoTarget:true,target:100,bossDuque:false,bossCaboclo:false,bossFlorzinha:false};
-const isJokerItem=p=>!!p.kind;            // jokers de tipo têm "kind"; poderes da loja não
+const isJokerItem=p=>!!p.kind;            // tudo é joker agora (todos têm "kind"); selos ficam fora do array powers
 const countCat=joker=>powers.filter(p=>!!p.kind===joker).length;
 const limitFor=item=>isJokerItem(item)?CFG.maxJokers:CFG.maxPoderes;
 const catItems=item=>powers.filter(p=>!!p.kind===!!item.kind);
@@ -336,18 +344,17 @@ const metaBase=()=>CFG.autoTarget?targetFor(faseIdx):CFG.target;
 const metaAtual=()=>Math.round(metaBase()*(CFG.bossFlorzinha?1.5:1));
 let pendingAdd=null;
 
-/* adiciona um joker/poder respeitando o limite da categoria.
-   cost = $ a gastar (0 no debug); refresh = callback pra atualizar a tela de origem. */
-function tryAdd(item,cost,refresh){
-  if(money<cost)return;
+/* adiciona um joker/poder respeitando o limite da categoria (sempre grátis).
+   refresh = callback pra atualizar/avançar a tela de origem. */
+function tryAdd(item,refresh){
   if(countCat(isJokerItem(item))<limitFor(item)){
-    money-=cost;powers.push(item);render();if(refresh)refresh();
+    powers.push(item);render();if(refresh)refresh();
   }else{
-    openLimitModal(item,cost,refresh);
+    openLimitModal(item,refresh);
   }
 }
-function openLimitModal(item,cost,refresh){
-  pendingAdd={item,cost,refresh};
+function openLimitModal(item,refresh){
+  pendingAdd={item,refresh};
   const cat=isJokerItem(item)?"jokers":"poderes";
   document.getElementById("limit-msg").innerHTML=
     `Limite de <b>${cat}</b> cheio (${countCat(isJokerItem(item))}/${limitFor(item)}). `+
@@ -364,7 +371,7 @@ function openLimitModal(item,cost,refresh){
 }
 function resolveLimit(removeItem){
   const i=powers.indexOf(removeItem);if(i>=0)powers.splice(i,1);
-  money-=pendingAdd.cost;powers.push(pendingAdd.item);
+  powers.push(pendingAdd.item);
   const r=pendingAdd.refresh;pendingAdd=null;
   document.getElementById("limit").classList.remove("on");
   render();if(r)r();
@@ -385,7 +392,7 @@ const FASES=[
 ];
 const HAND_SIZE=7;
 
-let monte,hand,selected,faseIdx,target,score,lives,money,powers,emptyBonus,tilesThisHand,board,over,faseOver;
+let monte,hand,selected,faseIdx,target,score,lives,powers,emptyBonus,tilesThisHand,board,over,faseOver;
 
 /* ===== setup ===== */
 function fullSet(){const t=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)t.push([a,b]);return t;}
@@ -394,7 +401,7 @@ function targetFor(i){return Math.round(40*Math.pow(1.6,i));}
 function curFase(){return FASES[Math.min(faseIdx,FASES.length-1)];}
 function isBoss(){return !!curFase().boss;}
 
-function newGame(){faseIdx=0;money=0;powers=[];pendingUnlocks=[];afterUnlock=null;document.getElementById("end").classList.remove("on");startFase();}
+function newGame(){faseIdx=0;powers=[];pendingUnlocks=[];afterUnlock=null;document.getElementById("end").classList.remove("on");startFase();}
 function startFase(){
   monte=shuffle(fullSet());
   hand=monte.splice(0,HAND_SIZE);
@@ -422,22 +429,28 @@ function colocar(t,lado){
   else{const re=pontaDir();board.push(a===re?[a,b]:[b,a]);}
 }
 function isDouble(t){return t[0]===t[1];}
+/* "lá e lô": as duas pontas abertas mostram o mesmo número (mesa precisa ter peça) */
+function isLaELo(){return board.length>0&&pontaEsq()===pontaDir();}
 
 /* ===== mult atual (base, mostrado no HUD) ===== */
 function baseMult(){return 1+(has("cachaca")?2:0)+emptyBonus;}
 
 /* calcula e aplica a pontuação de uma peça jogada; retorna {ganho,chips,mult} */
-function pontuar(t,viaGato){
+function pontuar(t,viaGato,laEloBefore){
+  const laEloAfter=isLaELo();                                           // estado da mesa DEPOIS de encaixar
   let chips=t[0]+t[1];
   if(has("file")&&(t[0]===6||t[1]===6))chips*=2;
   if(has("mare"))chips+=1;
   powers.forEach(p=>{if(p.kind==="add"&&tileTem(t,p.tipo))chips+=5;});   // jokers +5 por tipo
   let mult=baseMult();
   if(has("carroca")&&isDouble(t))mult+=3;
+  if(has("bombalo")&&isDouble(t)&&laEloBefore)mult+=5;                  // CAMPO: bomba com mesa em lá e lô → +5 Mult
   if(viaGato)powers.forEach(p=>{if(p.gatoMult)mult+=p.gatoMult;});       // joker: gato por lebre dá +Mult
   let ganho=chips*mult;
   powers.forEach(p=>{if(p.kind==="mult"&&tileTem(t,p.tipo))ganho*=2;});  // jokers x2 por tipo
-  if((CFG.bossCaboclo||CFG.bossFlorzinha)&&tilesThisHand===1)ganho=0;    // Boss Mau-Olhado
+  if(has("lalo5")&&laEloBefore)ganho+=5;                                // CAMPO: peça com mesa já em lá e lô → +5 pontos
+  if(has("laelo10")&&laEloAfter)ganho+=10;                              // CAMPO: jogada deixou a mesa em lá e lô → +10 pontos
+  if((CFG.bossCaboclo||CFG.bossFlorzinha)&&tilesThisHand===1)ganho=0;    // Boss Mau-Olhado (zera tudo)
   score+=ganho;
   return {ganho,chips,mult};
 }
@@ -460,10 +473,11 @@ function clicarPeca(idx){
 function jogar(idx,lado){
   document.getElementById("endbtns").innerHTML="";
   const t=hand.splice(idx,1)[0];
+  const laElo=isLaELo();                 // mesa em lá e lô ANTES de encaixar (p/ jokers de campo)
   colocar(t,lado);selected=null;tilesThisHand++;
 
   // pontuação: fichas × mult
-  const r=pontuar(t);
+  const r=pontuar(t,false,laElo);
   if(r.ganho>0)flash("+"+r.ganho+"  ("+r.chips+" × "+r.mult+")");
   else flash("Mau-olhado! 0",true);
 
@@ -518,10 +532,11 @@ function confirmarGato(lado){
   if(over||faseOver)return;
   if(Math.random()<gatoChance()){
     // SUCESSO: a peça "cola" na ponta escolhida mesmo sem encaixar
+    const laElo=isLaELo();                 // mesa em lá e lô ANTES de colar (p/ jokers de campo)
     hand.splice(idx,1);
     if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
     selected=null;tilesThisHand++;
-    const r=pontuar(t,true);   // viaGato → ativa jokers de blefe (petisca dá +Mult)
+    const r=pontuar(t,true,laElo);   // viaGato → ativa jokers de blefe (petisca dá +Mult)
     flash(r.ganho>0?("Colou! +"+r.ganho+" 🐱→🐇"):"Colou! 🐱→🐇",true);
     unlock("blefe");   // 1º sucesso desbloqueia o Mestre do Blefe (anunciado no fim da fase)
     if(score>=target){render();return winFase();}
@@ -566,7 +581,7 @@ function checkTravou(){
 
 /* ===== fim de fase ===== */
 function winFase(){
-  faseOver=true;money+=5;render();
+  faseOver=true;render();
   setTimeout(()=>showUnlocksThen(()=>openShop("✅ "+curFase().nome.replace(/^⚔ CHEFE — /,"")+" — meta batida!")),700);
 }
 function loseFase(motivo){
@@ -578,21 +593,19 @@ function loseFase(motivo){
   });
 }
 
-/* ===== loja ===== */
+/* ===== recompensa pós-fase: escolha 1 joker grátis de 3 ===== */
 function openShop(titulo){
-  const extra=GATO_JOKERS.filter(j=>unlocked[j.id]);   // só entram na loja depois de desbloquear
-  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS,extra).filter(p=>!has(p.id))).slice(0,3);
-  document.getElementById("shop-money").textContent=money;
-  document.getElementById("shop-title").textContent="🛒 "+titulo;
+  const extra=GATO_JOKERS.filter(j=>unlocked[j.id]);   // só aparecem depois de desbloquear
+  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS,CAMPO_JOKERS,extra).filter(p=>!has(p.id))).slice(0,3);
+  document.getElementById("shop-title").textContent="🎁 "+titulo;
   const box=document.getElementById("shop-items");box.innerHTML="";
   if(pool.length===0)box.innerHTML='<div class="hint">Você já tem tudo!</div>';
   pool.forEach(p=>{
     const c=document.createElement("div");c.className="shop-card";
-    c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div><div class="price">$${p.price}</div>`;
+    c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
     const b=document.createElement("button");
-    b.textContent=money>=p.price?"Comprar":"Sem $";
-    b.disabled=money<p.price;
-    b.onclick=()=>tryAdd(p,p.price,()=>openShop(titulo));
+    b.textContent="Escolher";
+    b.onclick=()=>tryAdd(p,nextFase);   // grátis: ao escolher, segue pra próxima fase
     c.appendChild(b);box.appendChild(c);
   });
   document.getElementById("shop").classList.add("on");
@@ -690,7 +703,7 @@ function tutCls(step,t){
 function startTutorial(){
   tutorial=true;tutStep=0;faseIdx=0;
   monte=[];hand=TUT_HAND.map(t=>t.slice());board=[];selected=null;over=false;faseOver=false;
-  score=0;target=0;lives=1;money=0;powers=[];emptyBonus=0;tilesThisHand=0;gatoTravado=false;
+  score=0;target=0;lives=1;powers=[];emptyBonus=0;tilesThisHand=0;gatoTravado=false;
   pendingUnlocks=[];afterUnlock=null;
   document.getElementById("end").classList.remove("on");
   showTutStep();
@@ -745,11 +758,11 @@ function endTutorial(){tutorial=false;newGame();}  // acaba o tutorial → come�
 /* ===== debug: adicionar jokers com a tecla F ===== */
 function buildDebug(){
   const box=document.getElementById("debug-items");box.innerHTML="";
-  TIPO_JOKERS.concat(GATO_JOKERS).forEach(p=>{
+  ALL_POWERS.concat(TIPO_JOKERS,CAMPO_JOKERS,GATO_JOKERS).forEach(p=>{
     const c=document.createElement("div");c.className="shop-card";
     c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
     const b=document.createElement("button");b.textContent="Adicionar";
-    b.onclick=()=>tryAdd(p,0,null);
+    b.onclick=()=>tryAdd(p,null);
     c.appendChild(b);box.appendChild(c);
   });
 }

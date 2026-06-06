@@ -8,25 +8,26 @@
 
 ## PARTE 1 — Jokers que já existem
 
-### 1.1 Poderes da Loja (aparecem depois da fase, na tela de loja)
-Ficam a run inteira (máx. 5). Definidos em `ALL_POWERS`.
+### 1.1 Jokers de Efeito Global (recompensa pós-fase)
+Antes eram "Poderes da Loja". **Não existe mais dinheiro:** ao fim de cada fase você escolhe **1 de 3 jokers grátis**. Ficam a run inteira. Definidos em `ALL_POWERS` (todos com `kind:"power"` — agora contam como jokers).
 
-| Nome | Efeito | Preço | Tipo de efeito |
-|---|---|---|---|
-| **Cachaça** | +2 de Mult base | $5 | +Mult (permanente) |
-| **Carroça Dourada** | Jogar uma carroça (dupla) dá +3 Mult naquela jogada | $5 | +Mult condicional |
-| **Maré** | Cada pedra jogada vale +1 Ficha | $4 | +Fichas |
-| **Mão Cheia** | Toda vez que você esvazia a mão: +1 Mult na fase | $6 | +Mult escalável |
-| **Filé da Rendeira** | Pedras com um 6 valem o dobro de Fichas | $6 | ×Fichas condicional |
-| **Jangada** | +1 rodada no início de cada fase | $5 | Utilidade (vidas) |
+| Nome | Efeito | Tipo de efeito |
+|---|---|---|
+| **Cachaça** | +2 de Mult base | +Mult (permanente) |
+| **Carroça Dourada** | Jogar uma carroça (dupla) dá +3 Mult naquela jogada | +Mult condicional |
+| **Maré** | Cada pedra jogada vale +1 Ficha | +Fichas |
+| **Mão Cheia** | Toda vez que você esvazia a mão: +1 Mult na fase | +Mult escalável |
+| **Filé da Rendeira** | Pedras com um 6 valem o dobro de Fichas | ×Fichas condicional |
+| **Jangada** | +1 rodada no início de cada fase | Utilidade (vidas) |
 
 ### 1.2 Jokers por Tipo de Pedra (adicionados via debug — tecla **F**)
-12 jokers, 2 para cada tipo. Aplicam se a peça **tiver** aquele número em **pelo menos uma** das metades. Definidos em `TIPO_JOKERS`.
+14 jokers, 2 para cada tipo. Aplicam se a peça **tiver** aquele número em **pelo menos uma** das metades. Definidos em `TIPO_JOKERS` (gerados a partir do array `TIPOS`).
 
-Tipos: **Piu (1) · Duque (2) · Terno (3) · Quadra (4) · Quina (5) · Sena (6)**
+Tipos: **Branco (0) · Piu (1) · Duque (2) · Terno (3) · Quadra (4) · Quina (5) · Sena (6)**
 
 | Tipo | Joker "+5" (kind: add) | Joker "Dobro" (kind: mult) |
 |---|---|---|
+| Branco (0) | **+5 Branco** — +5 fichas se a peça tiver 0 (branco) | **Branco em Dobro** — dobra os pontos se a peça tiver 0 (branco) |
 | Piu (1) | **+5 Piu** — +5 fichas se a peça tiver 1 | **Piu em Dobro** — dobra os pontos se a peça tiver 1 |
 | Duque (2) | **+5 Duque** | **Duque em Dobro** |
 | Terno (3) | **+5 Terno** | **Terno em Dobro** |
@@ -34,7 +35,31 @@ Tipos: **Piu (1) · Duque (2) · Terno (3) · Quadra (4) · Quina (5) · Sena (6
 | Quina (5) | **+5 Quina** | **Quina em Dobro** |
 | Sena (6) | **+5 Sena** | **Sena em Dobro** |
 
-> Total atual: **6 poderes de loja + 12 jokers de tipo = 18 jokers**.
+### 1.3 Jokers do Gato por Lebre (desbloqueados no 1º resultado de gato)
+2 jokers especiais ligados à mecânica de "gato por lebre" (jogar peça que não encaixa). Desbloqueiam quando você tem o primeiro resultado de gato. Definidos em `GATO_JOKERS`.
+
+| Nome | Efeito | Tipo de efeito |
+|---|---|---|
+| **Quem não arrisca não petisca** | Quando seu gato por lebre pontua: +2 de Mult naquela jogada | +Mult condicional (`gatoMult`) |
+| **Mestre do Blefe** | Aumenta a chance do gato por lebre para 50% | Utilidade (`gatoBonus`) |
+
+### 1.4 Jokers de Efeito de Campo (reagem ao estado da mesa)
+Reagem ao estado das **pontas abertas** no momento da jogada. Definidos em `CAMPO_JOKERS`.
+
+- **lá e lô** = as duas pontas abertas têm o **mesmo número** (`isLaELo()` → `pontaEsq() === pontaDir()`).
+- **bomba** = carroça / peça dupla (`isDouble()`).
+
+| Nome | Efeito | Quando | Tipo de efeito |
+|---|---|---|---|
+| **Lá e Lô Premiado** | +10 pontos | A jogada **deixa** a mesa em lá e lô (estado *depois*) | +Pontos (flat) |
+| **Bomba na Maré** | +5 de Mult | Joga uma **bomba** com a mesa **já** em lá e lô (estado *antes*) | +Mult condicional |
+| **Embalo do Lá e Lô** | +5 pontos | Joga **qualquer** peça com a mesa **já** em lá e lô (estado *antes*) | +Pontos (flat) |
+
+> Nota: "pontos" aqui é bônus **flat no resultado final** da jogada (somado depois de `fichas × mult`). O Mau-Olhado dos chefes zera a jogada inteira, inclusive esses bônus.
+
+> Total atual: **6 jokers globais + 14 jokers de tipo + 3 jokers de campo + 2 jokers do gato = 25 jokers**. Todos aparecem no modal de debug (tecla **F**) e no pool de recompensa pós-fase.
+>
+> **Selos:** a categoria de Selos está **vazia** por enquanto — selos ficam *na peça*, não no array de jokers (ver seção 2.8). O painel "Selos" do jogo aparece sem itens.
 
 ---
 
