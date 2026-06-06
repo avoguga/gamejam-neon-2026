@@ -84,6 +84,7 @@
   .hand .domino{cursor:pointer;transition:transform .1s}
   .hand .domino:hover{transform:translateY(-5px)}
   .domino.playable{outline:3px solid #e0a300}
+  .domino.gato{outline:3px solid #d34b45}
   .domino.dead{opacity:.4}
   .domino.selected{transform:translateY(-8px);outline:3px solid #d34b45}
 
@@ -111,7 +112,8 @@
   .cfg-row label{font-size:13px}
   .cfg-row input[type=number]{width:84px;padding:6px;border:2px solid #111;border-radius:6px;font-size:14px;text-align:center;background:#fff;color:#111}
   .cfg-row input[type=number]:disabled{background:#ddd;color:#999}
-  .cfg-row input[type=checkbox]{width:20px;height:20px}
+  .cfg-row input[type=checkbox]{width:20px;height:20px;flex:none}
+  .cfg-sub{font-size:11px;letter-spacing:1px;color:#ffd9a8;text-transform:uppercase;margin-top:10px;border-top:1px solid #555;padding-top:8px}
   .danger{background:#d34b45;color:#fff;border-color:#d34b45}
   .danger:hover{background:#fff;color:#d34b45}
 </style>
@@ -150,7 +152,7 @@
       <div class="side">
         <div class="opponent">
           <div class="opp-fig"><div class="opp-head"></div><div class="opp-body"></div></div>
-          <div class="opp-name">A LENDA<br>te observa…</div>
+          <div class="opp-name" id="opp-name">A LENDA<br>te observa…</div>
         </div>
 
         <div class="info">
@@ -187,7 +189,7 @@
   <!-- LOJA -->
   <div class="overlay" id="shop">
     <h2 id="shop-title">🛒 Loja</h2>
-    <div class="hint">Você tem <b>$<span id="shop-money">0</span></b>. Poderes valem a run inteira (máx. 5).</div>
+    <div class="hint">Você tem <b>$<span id="shop-money">0</span></b>. Jokers e Poderes valem a run inteira.</div>
     <div class="shop-items" id="shop-items"></div>
     <button id="next">Próxima fase ▶</button>
   </div>
@@ -215,6 +217,10 @@
       <div class="cfg-row"><label>Rodadas (vidas) por fase</label><input type="number" id="cfg-lives" min="1"></div>
       <div class="cfg-row"><label>Meta automática (escala por fase)</label><input type="checkbox" id="cfg-auto"></div>
       <div class="cfg-row"><label>Pontos pra vencer a fase</label><input type="number" id="cfg-target" min="1"></div>
+      <div class="cfg-sub">👹 Boss Fights (ative só por aqui)</div>
+      <div class="cfg-row"><label><b>Caboclo d'Água</b> — Mau-Olhado: a 1ª pedra de cada mão não pontua</label><input type="checkbox" id="cfg-caboclo"></div>
+      <div class="cfg-row"><label><b>Comadre Florzinha</b> — Mau-Olhado + a meta da fase sobe 50%</label><input type="checkbox" id="cfg-florzinha"></div>
+      <div class="cfg-row"><label><b>Duque Travado</b> — pedras com Duque (2) ficam desabilitadas</label><input type="checkbox" id="cfg-boss"></div>
     </div>
     <button id="cfg-apply">Aplicar</button>
   </div>
@@ -225,6 +231,17 @@
     <div class="hint" id="limit-msg"></div>
     <div class="shop-items" id="limit-items"></div>
     <button id="limit-discard" class="danger">Descartar (não gasta $)</button>
+  </div>
+
+  <!-- TROCAR GATO POR LEBRE -->
+  <div class="overlay" id="gato">
+    <h2>🐱↔🐇 Deseja trocar gato por lebre?</h2>
+    <div class="hint" id="gato-msg"></div>
+    <div>
+      <button id="gato-esq" class="danger">◀ Esquerda</button>
+      <button id="gato-dir" class="danger">Direita ▶</button>
+      <button id="gato-no">Cancelar</button>
+    </div>
   </div>
 
   <div class="dbg-hint">F = jokers (debug) · G = config de balanceamento</div>
@@ -256,11 +273,15 @@ TIPOS.forEach(([n,nome])=>{
 const tileTem=(t,n)=>t[0]===n||t[1]===n;
 
 /* ===== config de balanceamento (modal tecla G) ===== */
-let CFG={maxJokers:5,maxPoderes:5,lives:3,autoTarget:true,target:100};
+let CFG={maxJokers:5,maxPoderes:5,lives:3,autoTarget:true,target:100,bossDuque:false,bossCaboclo:false,bossFlorzinha:false};
 const isJokerItem=p=>!!p.kind;            // jokers de tipo têm "kind"; poderes da loja não
 const countCat=joker=>powers.filter(p=>!!p.kind===joker).length;
 const limitFor=item=>isJokerItem(item)?CFG.maxJokers:CFG.maxPoderes;
 const catItems=item=>powers.filter(p=>!!p.kind===!!item.kind);
+const bloqueado=t=>CFG.bossDuque&&tileTem(t,2);   // BOSS Duque Travado: pedras com Duque (2) travadas
+/* meta da fase, já com o boss Comadre Florzinha (+50%) se ativo */
+const metaBase=()=>CFG.autoTarget?targetFor(faseIdx):CFG.target;
+const metaAtual=()=>Math.round(metaBase()*(CFG.bossFlorzinha?1.5:1));
 let pendingAdd=null;
 
 /* adiciona um joker/poder respeitando o limite da categoria.
@@ -306,9 +327,9 @@ const FASES=[
   {nome:"A Maré de Pajuçara"},
   {nome:"O Sururu da Lagoa Mundaú"},
   {nome:"A Jangada da Praia do Francês"},
-  {nome:"⚔ CHEFE — Caboclo d'Água (Mau-Olhado: a 1ª pedra de cada mão não pontua)", boss:"mauolhado"},
+  {nome:"O Farol da Ponta Verde"},
   {nome:"O Cânion do São Francisco"},
-  {nome:"⚔ CHEFE — Comadre Florzinha (Mau-Olhado de novo, meta alta!)", boss:"mauolhado"},
+  {nome:"A Feira de Maceió"},
 ];
 const HAND_SIZE=7;
 
@@ -326,8 +347,8 @@ function startFase(){
   monte=shuffle(fullSet());
   hand=monte.splice(0,HAND_SIZE);
   board=[];selected=null;over=false;faseOver=false;
-  score=0;emptyBonus=0;tilesThisHand=0;
-  target=CFG.autoTarget?targetFor(faseIdx):CFG.target;
+  score=0;emptyBonus=0;tilesThisHand=0;gatoTravado=false;
+  target=metaAtual();
   lives=CFG.lives+(has("jangada")?1:0);
   setStatus("");
   render();
@@ -341,7 +362,7 @@ function ondePodeJogar(t){
   const[a,b]=t,le=pontaEsq(),re=pontaDir();
   return{esq:a===le||b===le,dir:a===re||b===re};
 }
-function temJogada(){return hand.some(t=>{const p=ondePodeJogar(t);return p.esq||p.dir;});}
+function temJogada(){return hand.some(t=>{if(bloqueado(t))return false;const p=ondePodeJogar(t);return p.esq||p.dir;});}
 function colocar(t,lado){
   if(board.length===0){board.push([t[0],t[1]]);return;}
   const[a,b]=t;
@@ -353,11 +374,28 @@ function isDouble(t){return t[0]===t[1];}
 /* ===== mult atual (base, mostrado no HUD) ===== */
 function baseMult(){return 1+(has("cachaca")?2:0)+emptyBonus;}
 
+/* calcula e aplica a pontuação de uma peça jogada; retorna {ganho,chips,mult} */
+function pontuar(t){
+  let chips=t[0]+t[1];
+  if(has("file")&&(t[0]===6||t[1]===6))chips*=2;
+  if(has("mare"))chips+=1;
+  powers.forEach(p=>{if(p.kind==="add"&&tileTem(t,p.tipo))chips+=5;});   // jokers +5 por tipo
+  let mult=baseMult();
+  if(has("carroca")&&isDouble(t))mult+=3;
+  let ganho=chips*mult;
+  powers.forEach(p=>{if(p.kind==="mult"&&tileTem(t,p.tipo))ganho*=2;});  // jokers x2 por tipo
+  if((CFG.bossCaboclo||CFG.bossFlorzinha)&&tilesThisHand===1)ganho=0;    // Boss Mau-Olhado
+  score+=ganho;
+  return {ganho,chips,mult};
+}
+
 /* ===== jogar uma pedra ===== */
 function clicarPeca(idx){
   if(over||faseOver)return;
-  const t=hand[idx],p=ondePodeJogar(t);
-  if(!p.esq&&!p.dir)return;
+  const t=hand[idx];
+  if(bloqueado(t))return;              // boss: pedra com Duque não pode ser jogada
+  const p=ondePodeJogar(t);
+  if(!p.esq&&!p.dir){if(!gatoTravado)abrirGato(idx);return;}   // não encaixa → trocar gato por lebre (trava após falhar)
   selected=idx;render();
   if(p.esq&&p.dir&&board.length>0){
     const div=document.getElementById("endbtns");div.innerHTML="";
@@ -372,17 +410,8 @@ function jogar(idx,lado){
   colocar(t,lado);selected=null;tilesThisHand++;
 
   // pontuação: fichas × mult
-  let chips=t[0]+t[1];
-  if(has("file")&&(t[0]===6||t[1]===6))chips*=2;
-  if(has("mare"))chips+=1;
-  powers.forEach(p=>{if(p.kind==="add"&&tileTem(t,p.tipo))chips+=5;});   // jokers +5 por tipo
-  let mult=baseMult();
-  if(has("carroca")&&isDouble(t))mult+=3;
-  let ganho=chips*mult;
-  powers.forEach(p=>{if(p.kind==="mult"&&tileTem(t,p.tipo))ganho*=2;});  // jokers x2 por tipo
-  if(curFase().boss==="mauolhado"&&tilesThisHand===1)ganho=0; // chefe: 1ª pedra não pontua
-  score+=ganho;
-  if(ganho>0)flash("+"+ganho+"  ("+chips+" × "+mult+")");
+  const r=pontuar(t);
+  if(r.ganho>0)flash("+"+r.ganho+"  ("+r.chips+" × "+r.mult+")");
   else flash("Mau-olhado! 0",true);
 
   if(score>=target)return winFase();
@@ -396,6 +425,54 @@ function jogar(idx,lado){
   }
   render();
   checkTravou();
+}
+
+/* ===== trocar gato por lebre (jogar peça que NÃO encaixa) ===== */
+let gatoIdx=null,gatoTravado=false;   // gatoTravado: trava o gato pelo resto da fase após falhar
+function gatoChance(){
+  let c=0.10;                                           // base 10%
+  powers.forEach(p=>{if(p.gatoBonus)c+=p.gatoBonus;});  // jokers/selos futuros somam aqui
+  return Math.min(1,c);
+}
+function abrirGato(idx){
+  if(over||faseOver||gatoTravado)return;
+  gatoIdx=idx;
+  const t=hand[idx],pct=Math.round(gatoChance()*100);
+  document.getElementById("gato-msg").innerHTML=
+    `A pedra <b>[${t[0]}|${t[1]}]</b> não encaixa em nenhuma ponta. Escolha a ponta pra colar.<br>`+
+    `Chance de colar a mentira: <b>${pct}%</b>.<br>`+
+    `Se falhar: perde <b>METADE</b> dos pontos (${score} → ${Math.floor(score/2)}) <b>e</b> não pode mais trocar nesta fase.`;
+  document.getElementById("gato-esq").textContent="◀ Esquerda ("+pct+"%)";
+  document.getElementById("gato-dir").textContent="Direita ▶ ("+pct+"%)";
+  document.getElementById("gato").classList.add("on");
+}
+function cancelarGato(){gatoIdx=null;document.getElementById("gato").classList.remove("on");}
+function confirmarGato(lado){
+  const idx=gatoIdx;gatoIdx=null;
+  document.getElementById("gato").classList.remove("on");
+  if(idx==null||over||faseOver)return;
+  const t=hand[idx];
+  if(Math.random()<gatoChance()){
+    // SUCESSO: a peça "cola" na ponta escolhida mesmo sem encaixar
+    hand.splice(idx,1);
+    if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
+    selected=null;tilesThisHand++;
+    const r=pontuar(t);
+    flash(r.ganho>0?("Colou! +"+r.ganho+" 🐱→🐇"):"Colou! 🐱→🐇",true);
+    if(score>=target){render();return winFase();}
+    if(hand.length===0){
+      if(has("maocheia"))emptyBonus++;
+      hand.push(...monte.splice(0,HAND_SIZE));tilesThisHand=0;
+      flash("MÃO LIMPA! +mão grátis 🎉",true);
+    }
+    render();checkTravou();
+  }else{
+    // FALHA: perde metade dos pontos E trava o gato pelo resto da fase
+    score=Math.floor(score/2);gatoTravado=true;
+    flash("Pegou no flagra! −50% dos pontos 😿",true);
+    setStatus("Gato por lebre falhou — perdeu metade dos pontos e não pode mais trocar nesta fase.");
+    render();
+  }
 }
 
 /* ===== comprar (punido): −1 rodada ===== */
@@ -414,7 +491,7 @@ function checkTravou(){
   if(temJogada())return;
   // não tem jogada na mão
   if(monte.length>0&&lives>0){
-    setStatus("Travou! Compre do monte (−1 rodada) pra continuar.");
+    setStatus("Sem encaixe! Compre do monte (−1 rodada) ou tente trocar gato por lebre (peça vermelha).");
   }else{
     loseFase(lives<=0?"Acabaram as rodadas!":"Monte vazio e sem encaixe!");
   }
@@ -434,11 +511,11 @@ function loseFase(motivo){
 
 /* ===== loja ===== */
 function openShop(titulo){
-  const pool=shuffle(ALL_POWERS.filter(p=>!has(p.id))).slice(0,3);
+  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS).filter(p=>!has(p.id))).slice(0,3);
   document.getElementById("shop-money").textContent=money;
   document.getElementById("shop-title").textContent="🛒 "+titulo;
   const box=document.getElementById("shop-items");box.innerHTML="";
-  if(pool.length===0)box.innerHTML='<div class="hint">Você já tem todos os poderes!</div>';
+  if(pool.length===0)box.innerHTML='<div class="hint">Você já tem tudo!</div>';
   pool.forEach(p=>{
     const c=document.createElement("div");c.className="shop-card";
     c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div><div class="price">$${p.price}</div>`;
@@ -463,12 +540,18 @@ function render(){
   document.getElementById("fasedots").innerHTML=
     Array.from({length:faseIdx+1},()=>'<span class="dot"></span>').join("");
 
+  const bosses=[];
+  if(CFG.bossCaboclo)bosses.push("Caboclo d'Água");
+  if(CFG.bossFlorzinha)bosses.push("Comadre Florzinha");
+  if(CFG.bossDuque)bosses.push("Duque travado");
+  document.getElementById("opp-name").innerHTML=bosses.length?("👹 BOSS<br>"+bosses.join("<br>+ ")):"A LENDA<br>te observa…";
   document.getElementById("target").textContent=target;
   document.getElementById("score").textContent=score;
   document.getElementById("mult").textContent=baseMult();
   document.getElementById("lives").textContent=lives;
   document.getElementById("boneyard-count").textContent=monte.length;
-  document.getElementById("jokers").innerHTML=powers.map(p=>`<div class="joker"><b>${p.name}</b>${p.desc}</div>`).join("");
+  document.getElementById("jokers").innerHTML=powers.filter(isJokerItem).map(p=>`<div class="joker"><b>${p.name}</b>${p.desc}</div>`).join("");
+  document.getElementById("selos").innerHTML=powers.filter(p=>!isJokerItem(p)).map(p=>`<div class="joker"><b>${p.name}</b>${p.desc}</div>`).join("");
 
   document.getElementById("board").innerHTML=board.length?board.map(t=>dom(t[0],t[1])).join(""):'<span style="color:#aaa">(vazia — jogue qualquer pedra)</span>';
   const ed=document.getElementById("ends");
@@ -476,8 +559,12 @@ function render(){
 
   const yh=document.getElementById("your-hand");yh.innerHTML="";
   hand.forEach((t,i)=>{
-    const p=ondePodeJogar(t);const pode=(p.esq||p.dir)&&!over&&!faseOver;
-    const cls=(pode?"playable":"dead")+(i===selected?" selected":"");
+    const p=ondePodeJogar(t);
+    let cls;
+    if(over||faseOver||bloqueado(t))cls="dead";    // boss/fim: cinza, sem ação
+    else if(p.esq||p.dir)cls="playable";           // encaixa: contorno amarelo
+    else cls=gatoTravado?"dead":"gato";            // não encaixa: vermelho (gato), ou cinza se já falhou na fase
+    if(i===selected)cls+=" selected";
     const w=document.createElement("div");w.innerHTML=dom(t[0],t[1],cls);
     const el=w.firstChild;el.onclick=()=>clicarPeca(i);yh.appendChild(el);
   });
@@ -506,6 +593,9 @@ function openConfig(){
   document.getElementById("cfg-auto").checked=CFG.autoTarget;
   document.getElementById("cfg-target").value=CFG.target;
   document.getElementById("cfg-target").disabled=CFG.autoTarget;
+  document.getElementById("cfg-caboclo").checked=CFG.bossCaboclo;
+  document.getElementById("cfg-florzinha").checked=CFG.bossFlorzinha;
+  document.getElementById("cfg-boss").checked=CFG.bossDuque;
   document.getElementById("config").classList.add("on");
 }
 function toggleConfig(){
@@ -518,9 +608,12 @@ function applyConfig(){
   CFG.lives     =Math.max(1,+document.getElementById("cfg-lives").value  ||CFG.lives);
   CFG.autoTarget=document.getElementById("cfg-auto").checked;
   CFG.target    =Math.max(1,+document.getElementById("cfg-target").value ||CFG.target);
+  CFG.bossCaboclo =document.getElementById("cfg-caboclo").checked;
+  CFG.bossFlorzinha=document.getElementById("cfg-florzinha").checked;
+  CFG.bossDuque   =document.getElementById("cfg-boss").checked;
   // aplica já na fase atual pra testar na hora
   lives=CFG.lives+(has("jangada")?1:0);
-  target=CFG.autoTarget?targetFor(faseIdx):CFG.target;
+  target=metaAtual();
   render();
   document.getElementById("config").classList.remove("on");
 }
@@ -535,6 +628,9 @@ document.getElementById("debug-close").onclick=toggleDebug;
 document.getElementById("cfg-apply").onclick=applyConfig;
 document.getElementById("cfg-auto").onchange=e=>{document.getElementById("cfg-target").disabled=e.target.checked;};
 document.getElementById("limit-discard").onclick=discardLimit;
+document.getElementById("gato-esq").onclick=()=>confirmarGato("esq");
+document.getElementById("gato-dir").onclick=()=>confirmarGato("dir");
+document.getElementById("gato-no").onclick=cancelarGato;
 
 document.getElementById("draw").onclick=comprar;
 document.getElementById("next").onclick=nextFase;
