@@ -29,8 +29,8 @@
   .ends b{color:#111}
 
   /* status sobreposto no topo da mesa */
-  #status{position:absolute;top:34px;left:50%;transform:translateX(-50%);width:88%;text-align:center;
-    font-weight:700;font-size:14px;color:#111;min-height:20px;z-index:3;pointer-events:none}
+  #status{position:absolute;top:48px;left:50%;transform:translateX(-50%);width:88%;text-align:center;
+    font-weight:700;font-size:17px;color:#111;min-height:20px;z-index:3;pointer-events:none}
 
   /* zona da mão: sobreposta na parte de baixo da mesa */
   .handzone{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:74%;max-width:640px;
@@ -85,6 +85,7 @@
   .hand .domino:hover{transform:translateY(-5px)}
   .domino.playable{outline:3px solid #e0a300}
   .domino.gato{outline:3px solid #d34b45}
+  .domino.tut{outline:3px solid #2196f3;box-shadow:0 0 10px #2196f3}
   .domino.dead{opacity:.4}
   .domino.selected{transform:translateY(-8px);outline:3px solid #d34b45}
 
@@ -107,6 +108,7 @@
   .overlay.debug .shop-items{margin:10px 0}
   .overlay.debug .shop-card{width:165px}
   .dbg-hint{position:fixed;left:10px;bottom:8px;color:#888;font-size:11px;z-index:7;pointer-events:none}
+  .tut-note{font-size:11px;color:#b3a8a8;font-style:italic;margin:6px 0 2px}
   .cfg-box{display:flex;flex-direction:column;gap:6px;margin:14px 0}
   .cfg-row{display:flex;justify-content:space-between;align-items:center;gap:16px;width:340px}
   .cfg-row label{font-size:13px}
@@ -244,6 +246,25 @@
     </div>
   </div>
 
+  <!-- JOKER DESBLOQUEADO (mostrado no fim da fase) -->
+  <div class="overlay" id="unlock">
+    <h2>🔓 Novo joker desbloqueado!</h2>
+    <div class="hint">A partir de agora ele pode aparecer na loja pós-fase.</div>
+    <div class="shop-items" id="unlock-items"></div>
+    <button id="unlock-ok">Continuar ▶</button>
+  </div>
+
+  <!-- FIM DO TUTORIAL (fase concluída) -->
+  <div class="overlay" id="tut-end">
+    <h2>✅ Fase concluída!</h2>
+    <div class="hint">Mandou bem — você já pegou o básico do dominó.</div>
+    <div class="tut-note">A próxima parte do tutorial será sobre os Jokers.</div>
+    <div>
+      <button id="tut-play">Ir para o jogo ▶</button>
+      <button id="tut-replay">Rever tutorial</button>
+    </div>
+  </div>
+
   <div class="dbg-hint">F = jokers (debug) · G = config de balanceamento</div>
 
 <script>
@@ -271,6 +292,37 @@ TIPOS.forEach(([n,nome])=>{
   TIPO_JOKERS.push({id:"mult"+n,name:nome+" em Dobro",desc:"Dobra os pontos se a peça tiver "+n+".",kind:"mult", tipo:n, price:6});
 });
 const tileTem=(t,n)=>t[0]===n||t[1]===n;
+
+/* ===== jokers especiais do GATO POR LEBRE (desbloqueados no 1º resultado) ===== */
+const GATO_JOKERS=[
+  {id:"petisca",name:"Quem não arrisca não petisca",desc:"Quando seu gato por lebre pontua: +2 de Mult naquela jogada.",price:6,kind:"special",gatoMult:2},
+  {id:"blefe",  name:"Mestre do Blefe",             desc:"Aumenta a chance do gato por lebre para 50%.",         price:7,kind:"special",gatoBonus:0.25},
+];
+let unlocked={petisca:false,blefe:false};   // persistem na sessão (não resetam a cada run)
+let pendingUnlocks=[],afterUnlock=null;     // jokers desbloqueados na fase atual → mostrados no fim
+/* desbloqueia um joker (genérico): marca, e guarda pra anunciar no fim da fase */
+function unlock(id){
+  if(unlocked[id])return;
+  unlocked[id]=true;
+  const j=[...GATO_JOKERS,...ALL_POWERS,...TIPO_JOKERS].find(x=>x.id===id);
+  if(j)pendingUnlocks.push(j);
+}
+/* mostra o modal de desbloqueios (se houver) e DEPOIS roda a ação (loja/fim) */
+function showUnlocksThen(action){
+  if(!pendingUnlocks.length){action();return;}
+  const box=document.getElementById("unlock-items");box.innerHTML="";
+  pendingUnlocks.forEach(j=>{
+    const c=document.createElement("div");c.className="shop-card";
+    c.innerHTML=`<b>${j.name}</b><div class="hint">${j.desc}</div>`;
+    box.appendChild(c);
+  });
+  pendingUnlocks=[];afterUnlock=action;
+  document.getElementById("unlock").classList.add("on");
+}
+function closeUnlock(){
+  document.getElementById("unlock").classList.remove("on");
+  const a=afterUnlock;afterUnlock=null;if(a)a();
+}
 
 /* ===== config de balanceamento (modal tecla G) ===== */
 let CFG={maxJokers:5,maxPoderes:5,lives:3,autoTarget:true,target:100,bossDuque:false,bossCaboclo:false,bossFlorzinha:false};
@@ -342,7 +394,7 @@ function targetFor(i){return Math.round(40*Math.pow(1.6,i));}
 function curFase(){return FASES[Math.min(faseIdx,FASES.length-1)];}
 function isBoss(){return !!curFase().boss;}
 
-function newGame(){faseIdx=0;money=0;powers=[];document.getElementById("end").classList.remove("on");startFase();}
+function newGame(){faseIdx=0;money=0;powers=[];pendingUnlocks=[];afterUnlock=null;document.getElementById("end").classList.remove("on");startFase();}
 function startFase(){
   monte=shuffle(fullSet());
   hand=monte.splice(0,HAND_SIZE);
@@ -375,13 +427,14 @@ function isDouble(t){return t[0]===t[1];}
 function baseMult(){return 1+(has("cachaca")?2:0)+emptyBonus;}
 
 /* calcula e aplica a pontuação de uma peça jogada; retorna {ganho,chips,mult} */
-function pontuar(t){
+function pontuar(t,viaGato){
   let chips=t[0]+t[1];
   if(has("file")&&(t[0]===6||t[1]===6))chips*=2;
   if(has("mare"))chips+=1;
   powers.forEach(p=>{if(p.kind==="add"&&tileTem(t,p.tipo))chips+=5;});   // jokers +5 por tipo
   let mult=baseMult();
   if(has("carroca")&&isDouble(t))mult+=3;
+  if(viaGato)powers.forEach(p=>{if(p.gatoMult)mult+=p.gatoMult;});       // joker: gato por lebre dá +Mult
   let ganho=chips*mult;
   powers.forEach(p=>{if(p.kind==="mult"&&tileTem(t,p.tipo))ganho*=2;});  // jokers x2 por tipo
   if((CFG.bossCaboclo||CFG.bossFlorzinha)&&tilesThisHand===1)ganho=0;    // Boss Mau-Olhado
@@ -430,7 +483,7 @@ function jogar(idx,lado){
 /* ===== trocar gato por lebre (jogar peça que NÃO encaixa) ===== */
 let gatoIdx=null,gatoTravado=false;   // gatoTravado: trava o gato pelo resto da fase após falhar
 function gatoChance(){
-  let c=0.10;                                           // base 10%
+  let c=0.25;                                           // base 25%
   powers.forEach(p=>{if(p.gatoBonus)c+=p.gatoBonus;});  // jokers/selos futuros somam aqui
   return Math.min(1,c);
 }
@@ -450,15 +503,27 @@ function cancelarGato(){gatoIdx=null;document.getElementById("gato").classList.r
 function confirmarGato(lado){
   const idx=gatoIdx;gatoIdx=null;
   document.getElementById("gato").classList.remove("on");
-  if(idx==null||over||faseOver)return;
+  if(idx==null)return;
   const t=hand[idx];
+  if(tutorial){
+    // tutorial: sucesso garantido, sem desbloqueio de joker
+    hand.splice(idx,1);
+    if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
+    const step=TUT_STEPS[tutStep];
+    if(step.win){tutFinishPhase(t);return;}                  // passo da meta: gato sucesso → conclui a fase
+    flash("Colou! 🐱→🐇",true);
+    tutStep++;showTutStep();
+    return;
+  }
+  if(over||faseOver)return;
   if(Math.random()<gatoChance()){
     // SUCESSO: a peça "cola" na ponta escolhida mesmo sem encaixar
     hand.splice(idx,1);
     if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
     selected=null;tilesThisHand++;
-    const r=pontuar(t);
+    const r=pontuar(t,true);   // viaGato → ativa jokers de blefe (petisca dá +Mult)
     flash(r.ganho>0?("Colou! +"+r.ganho+" 🐱→🐇"):"Colou! 🐱→🐇",true);
+    unlock("blefe");   // 1º sucesso desbloqueia o Mestre do Blefe (anunciado no fim da fase)
     if(score>=target){render();return winFase();}
     if(hand.length===0){
       if(has("maocheia"))emptyBonus++;
@@ -471,12 +536,14 @@ function confirmarGato(lado){
     score=Math.floor(score/2);gatoTravado=true;
     flash("Pegou no flagra! −50% dos pontos 😿",true);
     setStatus("Gato por lebre falhou — perdeu metade dos pontos e não pode mais trocar nesta fase.");
+    unlock("petisca");   // 1ª falha desbloqueia o Quem não arrisca não petisca (anunciado no fim da fase)
     render();
   }
 }
 
 /* ===== comprar (punido): −1 rodada ===== */
 function comprar(){
+  if(tutorial){tutDraw();return;}
   if(over||faseOver||monte.length===0||lives<=0)return;
   lives--;
   hand.push(monte.shift());
@@ -500,18 +567,21 @@ function checkTravou(){
 /* ===== fim de fase ===== */
 function winFase(){
   faseOver=true;money+=5;render();
-  setTimeout(()=>openShop("✅ "+curFase().nome.replace(/^⚔ CHEFE — /,"")+" — meta batida!"),700);
+  setTimeout(()=>showUnlocksThen(()=>openShop("✅ "+curFase().nome.replace(/^⚔ CHEFE — /,"")+" — meta batida!")),700);
 }
 function loseFase(motivo){
   over=true;render();
-  document.getElementById("end-title").textContent="🐴 Fim da run!";
-  document.getElementById("end-msg").innerHTML=`${motivo}<br>Você chegou à <b>fase ${faseIdx+1}</b> (${curFase().nome}) com ${score}/${target} pontos.`;
-  document.getElementById("end").classList.add("on");
+  showUnlocksThen(()=>{
+    document.getElementById("end-title").textContent="🐴 Fim da run!";
+    document.getElementById("end-msg").innerHTML=`${motivo}<br>Você chegou à <b>fase ${faseIdx+1}</b> (${curFase().nome}) com ${score}/${target} pontos.`;
+    document.getElementById("end").classList.add("on");
+  });
 }
 
 /* ===== loja ===== */
 function openShop(titulo){
-  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS).filter(p=>!has(p.id))).slice(0,3);
+  const extra=GATO_JOKERS.filter(j=>unlocked[j.id]);   // só entram na loja depois de desbloquear
+  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS,extra).filter(p=>!has(p.id))).slice(0,3);
   document.getElementById("shop-money").textContent=money;
   document.getElementById("shop-title").textContent="🛒 "+titulo;
   const box=document.getElementById("shop-items");box.innerHTML="";
@@ -559,23 +629,123 @@ function render(){
 
   const yh=document.getElementById("your-hand");yh.innerHTML="";
   hand.forEach((t,i)=>{
-    const p=ondePodeJogar(t);
     let cls;
-    if(over||faseOver||bloqueado(t))cls="dead";    // boss/fim: cinza, sem ação
-    else if(p.esq||p.dir)cls="playable";           // encaixa: contorno amarelo
-    else cls=gatoTravado?"dead":"gato";            // não encaixa: vermelho (gato), ou cinza se já falhou na fase
-    if(i===selected)cls+=" selected";
+    if(tutorial){
+      cls=tutCls(TUT_STEPS[tutStep],t);
+    }else{
+      const p=ondePodeJogar(t);
+      if(over||faseOver||bloqueado(t))cls="dead";    // boss/fim: cinza, sem ação
+      else if(p.esq||p.dir)cls="playable";           // encaixa: contorno amarelo
+      else cls=gatoTravado?"dead":"gato";            // não encaixa: vermelho (gato), ou cinza se já falhou
+      if(i===selected)cls+=" selected";
+    }
     const w=document.createElement("div");w.innerHTML=dom(t[0],t[1],cls);
-    const el=w.firstChild;el.onclick=()=>clicarPeca(i);yh.appendChild(el);
+    const el=w.firstChild;el.onclick=()=>tutorial?clicarPecaTut(i):clicarPeca(i);yh.appendChild(el);
   });
 
-  document.getElementById("draw").disabled=over||faseOver||monte.length===0||lives<=0;
+  document.getElementById("draw").disabled=tutorial?!TUT_STEPS[tutStep].draw:(over||faseOver||monte.length===0||lives<=0);
 }
+
+/* ===== TUTORIAL (falas no topo da mesa) ===== */
+let tutorial=false,tutStep=0;
+const TUT_HAND=[[3,3],[3,5],[5,4],[0,0],[1,0]];
+const TUT_STEPS=[
+  // 0 — jogue a 3/5
+  {text:"Opa, ta familiarizado com dominó? Não? Eu em... Vamos lá. Primeiro jogue uma das pedras em sua mão, vamos começar com essa.",
+   play:[[3,5]]},
+  // 1 — ligue metades correspondentes (3/3 e 5/4)
+  {text:"Certo! Note como cada pedra contem 2 numeros... Agora vamos ligar essas metades com outras pedras com metades correspondentes.",
+   play:[[3,3],[5,4]]},
+  // 2 — joga a outra que encaixa
+  {text:"Ok... Você ta pegando o jeito, agora faz a próxima jogada.",
+   play:"match", block:true},
+  // 3 — sem opções: compre do monte (vem a 1/1; rodadas=1)
+  {text:"Oh... Veja, estamos sem opções, hm... Certo, vamos comprar do monte! Comprar do monte custa uma rodada, quando suas rodadas chegam a zero, caso você não tenha mais opções para jogar, você perde! Vamos ver o que vem...",
+   draw:true, block:true},
+  // 4 — tudo ou nada: gato por lebre (sucesso garantido, sem desbloqueio)
+  {text:"Ok, agora é tudo ou nada! Vamos tentar blefar, ou como meu voinho diria, trocar gato por lebre.",
+   gato:[[0,0],[1,1]], block:true},
+  // 5 — esvazie a mão (joga 1/0 e depois a última limpa a mão = compra grátis)
+  {text:"UOU! ISSO FOI DO BARALHO! Agora vamos esvaziar nossa mão. Sempre que esvaziamos nossa mão, compramos do monte sem gastar rodadas!",
+   play:"match", block:true, empty:true},
+  // 6 — a meta aparece (27) com 26 pontos; qualquer jogada conclui a fase
+  {text:"Ufa, limpamos a mão, mas opa! Notou aquela meta ali? Quando superamos a meta, a fase é concluida, vamos tentar concluíla com o que fizemos até agora!",
+   win:true, setup:()=>{target=27;score=26;hand=[[6,6],[3,2],[4,1]];selected=null;}},
+];
+const sameTile=(t,p)=>(t[0]===p[0]&&t[1]===p[1])||(t[0]===p[1]&&t[1]===p[0]);
+const isGatoPiece=(step,t)=>!!step.gato&&step.gato.some(p=>sameTile(t,p));
+function tutPlayable(step,t){
+  if(step.play==="match"){const p=ondePodeJogar(t);return p.esq||p.dir;}
+  if(Array.isArray(step.play))return step.play.some(p=>sameTile(t,p));
+  return false;
+}
+/* classe visual da peça no tutorial: azul (jogável), vermelho (gato), cinza (travada) ou normal */
+function tutCls(step,t){
+  if(step.win){const p=ondePodeJogar(t);return (p.esq||p.dir)?"tut":"gato";}  // azul (encaixa) ou vermelho (gato)
+  if(isGatoPiece(step,t))return "gato";
+  if(step.play==="match")return tutPlayable(step,t)?"tut":"";
+  if(Array.isArray(step.play))return tutPlayable(step,t)?"tut":"dead";
+  return "dead";
+}
+function startTutorial(){
+  tutorial=true;tutStep=0;faseIdx=0;
+  monte=[];hand=TUT_HAND.map(t=>t.slice());board=[];selected=null;over=false;faseOver=false;
+  score=0;target=0;lives=1;money=0;powers=[];emptyBonus=0;tilesThisHand=0;gatoTravado=false;
+  pendingUnlocks=[];afterUnlock=null;
+  document.getElementById("end").classList.remove("on");
+  showTutStep();
+}
+function showTutStep(){const step=TUT_STEPS[tutStep];if(step.setup)step.setup();setStatus(step.text);render();}
+function clicarPecaTut(idx){
+  const step=TUT_STEPS[tutStep],t=hand[idx];
+  if(step.win){                                              // passo da meta: qualquer jogada conclui
+    const p=ondePodeJogar(t);
+    if(p.esq||p.dir){hand.splice(idx,1);colocar(t,p.esq?"esq":"dir");tutFinishPhase(t);}
+    else abrirGato(idx);                                     // não encaixa → gato (sucesso garantido)
+    return;
+  }
+  if(isGatoPiece(step,t)){abrirGato(idx);return;}            // vermelho → modal do gato (sucesso garantido no tutorial)
+  if(tutPlayable(step,t)){tutPlayPiece(idx,step);return;}
+  if(step.block)flash("Bloqueado!",true);
+}
+function tutPlayPiece(idx,step){
+  const t=hand[idx],p=ondePodeJogar(t);
+  const lado=board.length===0?"dir":(p.esq?"esq":"dir");
+  hand.splice(idx,1);colocar(t,lado);
+  if(step.empty){
+    if(hand.length===0){
+      flash("MÃO LIMPA! Compra grátis 🎉",true);
+      tutStep++;
+      if(tutStep>=TUT_STEPS.length){render();setTimeout(endTutorial,900);return;}
+      render();setTimeout(showTutStep,900);return;            // avança pro passo da meta
+    }
+    render();return;                                          // continua no passo até esvaziar a mão
+  }
+  tutStep++;
+  if(tutStep>=TUT_STEPS.length)return endTutorial();
+  showTutStep();
+}
+function tutDraw(){
+  const step=TUT_STEPS[tutStep];
+  if(!step.draw)return;
+  hand.push([1,1]);   // a peça que vem é a 1/1
+  lives--;            // a compra custa 1 rodada (1 → 0)
+  tutStep++;          // → passo do gato
+  showTutStep();
+}
+function tutFinishPhase(t){
+  pontuar(t);                       // soma os pontos da peça (26 + pontos da jogada)
+  if(score<target)score=target;     // garante a vitória ("qualquer peça serve")
+  render();
+  flash("FASE CONCLUÍDA! 🎉",true);
+  setTimeout(()=>document.getElementById("tut-end").classList.add("on"),1000);  // abre a tela de conclusão
+}
+function endTutorial(){tutorial=false;newGame();}  // acaba o tutorial → começa o jogo normal do jeito que está
 
 /* ===== debug: adicionar jokers com a tecla F ===== */
 function buildDebug(){
   const box=document.getElementById("debug-items");box.innerHTML="";
-  TIPO_JOKERS.forEach(p=>{
+  TIPO_JOKERS.concat(GATO_JOKERS).forEach(p=>{
     const c=document.createElement("div");c.className="shop-card";
     c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
     const b=document.createElement("button");b.textContent="Adicionar";
@@ -631,12 +801,15 @@ document.getElementById("limit-discard").onclick=discardLimit;
 document.getElementById("gato-esq").onclick=()=>confirmarGato("esq");
 document.getElementById("gato-dir").onclick=()=>confirmarGato("dir");
 document.getElementById("gato-no").onclick=cancelarGato;
+document.getElementById("unlock-ok").onclick=closeUnlock;
+document.getElementById("tut-play").onclick=()=>{document.getElementById("tut-end").classList.remove("on");endTutorial();};
+document.getElementById("tut-replay").onclick=()=>{document.getElementById("tut-end").classList.remove("on");startTutorial();};
 
 document.getElementById("draw").onclick=comprar;
 document.getElementById("next").onclick=nextFase;
 document.getElementById("restart").onclick=newGame;
 buildDebug();
-newGame();
+startTutorial();
 </script>
 </body>
 </html>
