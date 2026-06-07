@@ -1,0 +1,17 @@
+- generic [ref=e2]:
+  - generic [ref=e11]: Dominus
+  - generic [ref=e12]:
+    - heading "Dominus" [level=1] [ref=e13]
+    - paragraph [ref=e14]: Um roguelike deckbuilder de dominó com tempero alagoano. Monte suas jogadas, encaixe as metades, blefe no "gato por lebre" e bata a meta para avançar nas fases.
+    - heading "Vídeo" [level=2] [ref=e15]
+    - generic [ref=e16]: Seu navegador não suporta a reprodução de vídeo.
+    - heading "Como jogar" [level=2] [ref=e17]
+    - paragraph [ref=e18]:
+      - text: Este jogo usa
+      - strong [ref=e19]: apenas o mouse
+      - text: para jogar.
+    - heading "Créditos" [level=2] [ref=e20]
+    - list [ref=e21]:
+      - listitem [ref=e22]: Matheus Ferreira Game Designer · Sound Designer · Compositor das músicas
+      - listitem [ref=e23]: Gustavo Henrique Programador
+      - listitem [ref=e24]: Allan Felipe Designer · Ilustrador
