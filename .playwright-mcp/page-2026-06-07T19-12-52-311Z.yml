@@ -1,0 +1,16 @@
+- generic [ref=e2]:
+  - generic [ref=e11]: Burrinho Royale
+  - generic [ref=e12]:
+    - heading "Burrinho Royale" [level=1] [ref=e13]
+    - paragraph [ref=e14]: Um roguelike deckbuilder de dominó com tempero alagoano. Monte suas jogadas, encaixe as metades, blefe no "gato por lebre" e bata a meta para avançar nas fases.
+    - heading "Como jogar" [level=2] [ref=e15]
+    - paragraph [ref=e16]:
+      - text: Este jogo usa
+      - strong [ref=e17]: apenas o mouse
+      - text: para jogar.
+    - heading "Créditos" [level=2] [ref=e18]
+    - list [ref=e19]:
+      - listitem [ref=e20]: Matheus Ferreira Game Designer · Sound Designer · Compositor das músicas
+      - listitem [ref=e21]: Gustavo Henrique Programador
+      - listitem [ref=e22]: Allan Felipe Designer · Ilustrador
+    - paragraph [ref=e23]: Feito com 💙 para a Game Jam · 2026

@@ -2,8 +2,8 @@
 """
 Servidor local que espelha o que o Coolify serve.
 
-  /         -> index.html        (protótipo HTML de testes)
-  /unity/   -> unity/index.html  (build WebGL da Unity, .unityweb)
+  /                 -> index.html      (build WebGL da Unity, .unityweb)
+  /prototipo.html   -> protótipo HTML de testes (backup)
 
 Os .unityweb (Gzip + Decompression Fallback) NÃO precisam de header especial.
 
@@ -29,8 +29,8 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     with http.server.ThreadingHTTPServer(("127.0.0.1", PORT), Handler) as httpd:
-        print(f"Protótipo  ->  http://localhost:{PORT}/")
-        print(f"Unity      ->  http://localhost:{PORT}/unity/")
+        print(f"Game (Unity) ->  http://localhost:{PORT}/")
+        print(f"Protótipo    ->  http://localhost:{PORT}/prototipo.html")
         print("Ctrl+C para parar.")
         try:
             httpd.serve_forever()

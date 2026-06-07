@@ -1,828 +1,171 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Burrinho Royale — v2 (layout mesa emoldurada)</title>
-<style>
-  *{box-sizing:border-box}
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-    font-family:system-ui,sans-serif;background:#2a2622;color:#111;padding:16px}
-
-  /* ===== mesa emoldurada (o quadro do mock) ===== */
-  .frame{position:relative;width:100%;max-width:1120px;background:#f4f1ef;
-    border:5px solid #111;border-radius:6px;padding:9px;box-shadow:0 14px 44px rgba(0,0,0,.55)}
-  .frame-inner{border:3px solid #111;border-radius:4px;background:#efeceb;overflow:hidden;
-    display:grid;grid-template-columns:1fr 250px}
-
-  /* ===== palco principal (mesa de jogo) ===== */
-  .stage{position:relative;padding:14px;display:flex;flex-direction:column;min-height:680px}
-  .challenge{font-style:italic;color:#7a5a14;font-size:13px;min-height:18px;text-align:center;margin-bottom:8px}
-
-  .row{display:flex;gap:3px;justify-content:center;flex-wrap:wrap;align-items:center}
-  #board{gap:0}
-
-  /* mesa onde caem as pedras (retângulo branco central) */
-  .board{flex:1;min-height:500px;background:#f1efeb;border:3px solid #111;border-radius:8px;
-    padding:34px 16px 120px;position:relative;display:flex;align-items:center;justify-content:center}
-  .ends{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-size:12px;color:#666}
-  .ends b{color:#111}
-
-  /* status sobreposto no topo da mesa */
-  #status{position:absolute;top:48px;left:50%;transform:translateX(-50%);width:88%;text-align:center;
-    font-weight:700;font-size:17px;color:#111;min-height:20px;z-index:3;pointer-events:none}
-
-  /* zona da mão: sobreposta na parte de baixo da mesa */
-  .handzone{position:absolute;left:50%;bottom:16px;transform:translateX(-50%);width:74%;max-width:640px;
-    display:flex;flex-direction:column;align-items:center;gap:6px;z-index:2}
-  .endbtns{display:flex;gap:6px;justify-content:center;min-height:4px}
-  .handlabel{font-size:10px;letter-spacing:1px;color:#777}
-  .handrow{display:flex;align-items:center;justify-content:center;gap:10px;width:100%}
-  .hand{flex:1;min-height:54px;background:#fff;border:3px solid #111;border-radius:8px;padding:10px;box-shadow:0 6px 18px rgba(0,0,0,.28)}
-  .drawbtn{background:#d34b45;color:#fff;border-color:#d34b45;padding:7px 12px;font-size:12px;margin:0;white-space:nowrap}
-  .drawbtn:hover{background:#fff;color:#d34b45}
-  .drawbtn:disabled{background:#ccc;color:#888;border-color:#ccc}
-
-  /* indicador de FASE = pilha de pontinhos no canto inferior esquerdo */
-  .fasepile{position:absolute;left:0;bottom:0;width:152px;height:98px;background:#fff;
-    border:3px solid #111;border-radius:0 132px 0 0;
-    display:flex;flex-direction:column;align-items:center;justify-content:flex-end;
-    padding:0 0 12px 12px;z-index:4}
-  .fasedots{display:flex;flex-wrap:wrap-reverse;gap:6px;justify-content:center;align-items:center;max-width:96px}
-  .fasedots .dot{width:14px;height:14px;border-radius:50%;background:#111}
-  .fasepile .lbl{font-size:8px;color:#a33;letter-spacing:1px;margin-top:5px}
-
-  /* ===== painel direito (oponente + info + poderes) ===== */
-  .side{background:#f6dcdc;border-left:3px solid #111;display:flex;flex-direction:column}
-  .opponent{padding:18px 10px;display:flex;flex-direction:column;align-items:center;border-bottom:3px solid #111}
-  .opp-fig{display:flex;flex-direction:column;align-items:center}
-  .opp-head{width:54px;height:54px;border-radius:50%;background:#111}
-  .opp-body{width:60px;height:34px;background:#111;border-radius:12px 12px 0 0;margin-top:-3px}
-  .opp-name{font-size:11px;font-weight:700;color:#111;text-align:center;margin-top:10px;line-height:1.35}
-
-  /* caixas de informação abaixo da lenda */
-  .info{background:#fff;padding:12px 10px;border-bottom:3px solid #111;display:flex;flex-direction:column;gap:8px}
-  .inforow{display:flex;gap:8px}
-  .infobox{flex:1;border:2px solid #111;border-radius:6px;padding:5px 6px;text-align:center;background:#fff}
-  .infobox .k{font-size:9px;letter-spacing:1px;color:#999;text-transform:uppercase}
-  .infobox .v{font-size:18px;font-weight:800;color:#111}
-  .infobox.mult .v{color:#b03a36}.infobox.lives .v{color:#d34b45}.infobox.meta .v{color:#c9962a;font-size:22px}
-
-  .powers{background:#fff;flex:1;display:flex;flex-direction:column}
-  .psec{flex:1;padding:12px 10px;display:flex;flex-direction:column;gap:8px}
-  .psec+.psec{border-top:3px solid #111}
-  .plabel{font-size:9px;letter-spacing:1px;color:#999;text-transform:uppercase}
-  .jokers{display:flex;flex-direction:column;gap:9px}
-  .jokers:empty::after{content:"nenhum ainda";font-size:10px;color:#bbb;font-style:italic}
-  .joker{background:#f6dcdc;border:2px solid #111;border-radius:6px;padding:8px;font-size:10px;color:#444}
-  .joker b{display:block;color:#111;font-size:11px;margin-bottom:2px}
-
-  /* ===== peças de dominó ===== */
-  .domino{display:inline-flex;flex-direction:column;background:#fdfaf2;color:#222;border-radius:5px;overflow:hidden;border:2px solid #111;box-shadow:0 2px 3px rgba(0,0,0,.25)}
-  .domino .half{width:38px;height:30px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:bold}
-  .domino .half:first-child{border-bottom:2px solid #111}
-  .hand .domino{cursor:pointer;transition:transform .1s}
-  .hand .domino:hover{transform:translateY(-5px)}
-  .domino.playable{outline:3px solid #e0a300}
-  .domino.gato{outline:3px solid #d34b45}
-  .domino.tut{outline:3px solid #2196f3;box-shadow:0 0 10px #2196f3}
-  .domino.dead{opacity:.4}
-  .domino.selected{transform:translateY(-8px);outline:3px solid #d34b45}
-
-  #float{position:fixed;top:40%;left:50%;transform:translateX(-50%);font-size:30px;font-weight:bold;color:#c9962a;text-shadow:0 2px 8px #fff;opacity:0;pointer-events:none;z-index:20}
-  #float.go{animation:fly 1s ease forwards}
-  @keyframes fly{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}25%{opacity:1;transform:translate(-50%,-6px) scale(1.15)}100%{opacity:0;transform:translate(-50%,-46px) scale(1)}}
-
-  button{background:#111;color:#fff;border:2px solid #111;padding:9px 20px;border-radius:8px;font-size:15px;font-weight:bold;cursor:pointer;margin:4px}
-  button:hover{background:#fff;color:#111}button:disabled{background:#ccc;color:#888;border-color:#ccc;cursor:not-allowed}
-  .endbtns button{padding:6px 14px;font-size:13px}
-
-  .overlay{position:fixed;inset:0;background:rgba(20,16,14,.92);display:none;flex-direction:column;align-items:center;justify-content:center;padding:20px;z-index:9;color:#fff}
-  .overlay.on{display:flex}.overlay h2{font-size:25px;margin:6px}
-  .shop-items{display:flex;gap:12px;flex-wrap:wrap;justify-content:center;margin:16px 0;max-width:640px}
-  .shop-card{background:#fff;border:3px solid #111;border-radius:10px;padding:12px;width:185px;color:#222}
-  .shop-card b{color:#111}.shop-card .price{color:#3f8a4a;font-weight:bold;margin-top:6px}
-  .hint{color:#e8d9d9;font-size:12px;max-width:540px;line-height:1.5;margin:0 auto}
-  .shop-card .hint{color:#555}
-  .overlay.debug{justify-content:flex-start;overflow:auto;gap:4px}
-  .overlay.debug .shop-items{margin:10px 0}
-  .overlay.debug .shop-card{width:165px}
-  .dbg-hint{position:fixed;left:10px;bottom:8px;color:#888;font-size:11px;z-index:7;pointer-events:none}
-  .tut-note{font-size:11px;color:#b3a8a8;font-style:italic;margin:6px 0 2px}
-  .cfg-box{display:flex;flex-direction:column;gap:6px;margin:14px 0}
-  .cfg-row{display:flex;justify-content:space-between;align-items:center;gap:16px;width:340px}
-  .cfg-row label{font-size:13px}
-  .cfg-row input[type=number]{width:84px;padding:6px;border:2px solid #111;border-radius:6px;font-size:14px;text-align:center;background:#fff;color:#111}
-  .cfg-row input[type=number]:disabled{background:#ddd;color:#999}
-  .cfg-row input[type=checkbox]{width:20px;height:20px;flex:none}
-  .cfg-sub{font-size:11px;letter-spacing:1px;color:#ffd9a8;text-transform:uppercase;margin-top:10px;border-top:1px solid #555;padding-top:8px}
-  .danger{background:#d34b45;color:#fff;border-color:#d34b45}
-  .danger:hover{background:#fff;color:#d34b45}
-</style>
-</head>
-<body>
-  <div class="frame">
-    <div class="frame-inner">
-
-      <!-- PALCO (mesa de jogo) -->
-      <div class="stage">
-        <div class="board">
-          <div class="ends" id="ends"></div>
-          <div id="board" class="row"></div>
-        </div>
-
-        <div id="status"></div>
-
-        <!-- zona da mão sobreposta na mesa -->
-        <div class="handzone">
-          <div class="endbtns" id="endbtns"></div>
-          <div class="handlabel">SUA MÃO</div>
-          <div class="handrow">
-            <div id="your-hand" class="row hand"></div>
-            <button id="draw" class="drawbtn">Comprar −1</button>
+<html lang="pt-br">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
+    <title>Burrinho Royale</title>
+    <link rel="shortcut icon" href="TemplateData/favicon.ico">
+    <link rel="stylesheet" href="TemplateData/style.css">
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        background: #0d0f1a;
+        color: #e8eaf2;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+      }
+      .page {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px 16px 56px;
+      }
+      /* Tira o posicionamento absoluto padrão da Unity para o game entrar no fluxo normal */
+      #unity-container.unity-desktop {
+        position: relative;
+        left: auto;
+        top: auto;
+        transform: none;
+        margin: 0 auto 28px;
+        width: 960px;
+        max-width: 100%;
+      }
+      .info h1 {
+        margin: 0 0 8px;
+        font-size: 1.6rem;
+      }
+      .info h2 {
+        margin: 22px 0 6px;
+        font-size: 1.1rem;
+      }
+      .info p { margin: 6px 0; line-height: 1.55; }
+      .credits {
+        list-style: none;
+        padding: 0;
+        margin: 8px 0 0;
+      }
+      .credits li { margin: 0 0 10px; }
+      .credits .name { font-weight: 700; }
+      .credits .role { color: #9aa0b5; }
+      .footnote { margin-top: 22px; color: #9aa0b5; font-size: 0.85rem; }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div id="unity-container" class="unity-desktop">
+        <canvas id="unity-canvas" width=960 height=600 tabindex="-1"></canvas>
+        <div id="unity-loading-bar">
+          <div id="unity-logo"></div>
+          <div id="unity-progress-bar-empty">
+            <div id="unity-progress-bar-full"></div>
           </div>
         </div>
-
-        <!-- indicador de FASE: pontinhos no canto -->
-        <div class="fasepile">
-          <div class="fasedots" id="fasedots"></div>
-          <span class="lbl">FASE</span>
+        <div id="unity-warning"> </div>
+        <div id="unity-footer">
+          <div id="unity-logo-title-footer"></div>
+          <div id="unity-fullscreen-button"></div>
+          <div id="unity-build-title">Burrinho Royale</div>
         </div>
       </div>
 
-      <!-- PAINEL DIREITO: oponente + info + poderes -->
-      <div class="side">
-        <div class="opponent">
-          <div class="opp-fig"><div class="opp-head"></div><div class="opp-body"></div></div>
-          <div class="opp-name" id="opp-name">A LENDA<br>te observa…</div>
-        </div>
+      <div class="info">
+        <h1>Burrinho Royale</h1>
+        <p>Um roguelike deckbuilder de dominó com tempero alagoano. Monte suas jogadas, encaixe as metades, blefe no "gato por lebre" e bata a meta para avançar nas fases.</p>
 
-        <div class="info">
-          <div class="inforow">
-            <div class="infobox meta"><div class="k">Meta</div><div class="v" id="target">0</div></div>
-          </div>
-          <div class="inforow">
-            <div class="infobox"><div class="k">Monte</div><div class="v" id="boneyard-count">0</div></div>
-            <div class="infobox lives"><div class="k">Rodadas</div><div class="v" id="lives">3</div></div>
-          </div>
-          <div class="inforow">
-            <div class="infobox"><div class="k">Pontos</div><div class="v" id="score">0</div></div>
-            <div class="infobox mult"><div class="k">Mult</div><div class="v" id="mult">1</div></div>
-          </div>
-        </div>
+        <h2>Como jogar</h2>
+        <p>Este jogo usa <strong>apenas o mouse</strong> para jogar.</p>
 
-        <div class="powers">
-          <div class="psec">
-            <div class="plabel">Jokers</div>
-            <div class="jokers" id="jokers"></div>
-          </div>
-          <div class="psec">
-            <div class="plabel">Selos</div>
-            <div class="jokers" id="selos"></div>
-          </div>
-        </div>
+        <h2>Créditos</h2>
+        <ul class="credits">
+          <li>
+            <span class="name">Matheus Ferreira</span>
+            <span class="role">Game Designer · Sound Designer · Compositor das músicas</span>
+          </li>
+          <li>
+            <span class="name">Gustavo Henrique</span>
+            <span class="role">Programador</span>
+          </li>
+          <li>
+            <span class="name">Allan Felipe</span>
+            <span class="role">Designer · Ilustrador</span>
+          </li>
+        </ul>
+
+        <p class="footnote">Feito com 💙 para a Game Jam · 2026</p>
       </div>
-
     </div>
-  </div>
 
-  <div id="float"></div>
+    <script>
+      var canvas = document.querySelector("#unity-canvas");
 
-  <!-- RECOMPENSA: escolha 1 joker grátis -->
-  <div class="overlay" id="shop">
-    <h2 id="shop-title">🎁 Recompensa</h2>
-    <div class="hint">Escolha <b>1 joker grátis</b> dos 3 abaixo. Valem a run inteira.</div>
-    <div class="shop-items" id="shop-items"></div>
-    <button id="next">Pular ▶</button>
-  </div>
-  <!-- FIM -->
-  <div class="overlay" id="end">
-    <h2 id="end-title"></h2>
-    <div class="hint" id="end-msg"></div>
-    <button id="restart">Jogar de novo</button>
-  </div>
-  <!-- DEBUG (tecla F) -->
-  <div class="overlay debug" id="debug">
-    <h2>🛠 Debug — Adicionar Jokers</h2>
-    <div class="hint">Clique pra adicionar à sua mesa (pode repetir pra empilhar). Aperte <b>F</b> pra fechar.</div>
-    <div class="shop-items" id="debug-items"></div>
-    <button id="debug-close">Fechar (F)</button>
-  </div>
+      // Shows a temporary message banner/ribbon for a few seconds, or
+      // a permanent error message on top of the canvas if type=='error'.
+      // If type=='warning', a yellow highlight color is used.
+      // Modify or remove this function to customize the visually presented
+      // way that non-critical warnings and error messages are presented to the
+      // user.
+      function unityShowBanner(msg, type) {
+        var warningBanner = document.querySelector("#unity-warning");
+        function updateBannerVisibility() {
+          warningBanner.style.display = warningBanner.children.length ? 'block' : 'none';
+        }
+        var div = document.createElement('div');
+        div.innerHTML = msg;
+        warningBanner.appendChild(div);
+        if (type == 'error') div.style = 'background: red; padding: 10px;';
+        else {
+          if (type == 'warning') div.style = 'background: yellow; padding: 10px;';
+          setTimeout(function() {
+            warningBanner.removeChild(div);
+            updateBannerVisibility();
+          }, 5000);
+        }
+        updateBannerVisibility();
+      }
 
-  <!-- CONFIG / BALANCEAMENTO (tecla G) -->
-  <div class="overlay" id="config">
-    <h2>⚙ Config de Balanceamento</h2>
-    <div class="hint">Mexa nos valores pra testar — aplica na hora. Aperte <b>G</b> pra fechar.</div>
-    <div class="cfg-box">
-      <div class="cfg-row"><label>Limite de Jokers</label><input type="number" id="cfg-jokers" min="1"></div>
-      <div class="cfg-row"><label>Limite de Poderes</label><input type="number" id="cfg-poderes" min="1"></div>
-      <div class="cfg-row"><label>Rodadas (vidas) por fase</label><input type="number" id="cfg-lives" min="1"></div>
-      <div class="cfg-row"><label>Meta automática (escala por fase)</label><input type="checkbox" id="cfg-auto"></div>
-      <div class="cfg-row"><label>Pontos pra vencer a fase</label><input type="number" id="cfg-target" min="1"></div>
-      <div class="cfg-sub">👹 Boss Fights (ative só por aqui)</div>
-      <div class="cfg-row"><label><b>Caboclo d'Água</b> — Mau-Olhado: a 1ª pedra de cada mão não pontua</label><input type="checkbox" id="cfg-caboclo"></div>
-      <div class="cfg-row"><label><b>Comadre Florzinha</b> — Mau-Olhado + a meta da fase sobe 50%</label><input type="checkbox" id="cfg-florzinha"></div>
-      <div class="cfg-row"><label><b>Duque Travado</b> — pedras com Duque (2) ficam desabilitadas</label><input type="checkbox" id="cfg-boss"></div>
-    </div>
-    <button id="cfg-apply">Aplicar</button>
-  </div>
+      var buildUrl = "Build";
+      var loaderUrl = buildUrl + "/gamejam-neon2026.loader.js";
+      var config = {
+        arguments: [],
+        dataUrl: buildUrl + "/gamejam-neon2026.data.unityweb",
+        frameworkUrl: buildUrl + "/gamejam-neon2026.framework.js.unityweb",
+        codeUrl: buildUrl + "/gamejam-neon2026.wasm.unityweb",
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: "DefaultCompany",
+        productName: "neon-2026",
+        productVersion: "1.0",
+        showBanner: unityShowBanner,
+      };
 
-  <!-- LIMITE CHEIO: remover ou descartar -->
-  <div class="overlay" id="limit">
-    <h2>📦 Limite cheio</h2>
-    <div class="hint" id="limit-msg"></div>
-    <div class="shop-items" id="limit-items"></div>
-    <button id="limit-discard" class="danger">Descartar</button>
-  </div>
+      if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+        var meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, height=device-height, initial-scale=1.0, user-scalable=no, shrink-to-fit=yes';
+        document.getElementsByTagName('head')[0].appendChild(meta);
+        document.querySelector("#unity-container").className = "unity-mobile";
+        canvas.className = "unity-mobile";
+      } else {
+        canvas.style.width = "960px";
+        canvas.style.height = "600px";
+      }
 
-  <!-- TROCAR GATO POR LEBRE -->
-  <div class="overlay" id="gato">
-    <h2>🐱↔🐇 Deseja trocar gato por lebre?</h2>
-    <div class="hint" id="gato-msg"></div>
-    <div>
-      <button id="gato-esq" class="danger">◀ Esquerda</button>
-      <button id="gato-dir" class="danger">Direita ▶</button>
-      <button id="gato-no">Cancelar</button>
-    </div>
-  </div>
+      document.querySelector("#unity-loading-bar").style.display = "block";
 
-  <!-- JOKER DESBLOQUEADO (mostrado no fim da fase) -->
-  <div class="overlay" id="unlock">
-    <h2>🔓 Novo joker desbloqueado!</h2>
-    <div class="hint">A partir de agora ele pode aparecer na loja pós-fase.</div>
-    <div class="shop-items" id="unlock-items"></div>
-    <button id="unlock-ok">Continuar ▶</button>
-  </div>
+      var script = document.createElement("script");
+      script.src = loaderUrl;
+      script.onload = () => {
+        createUnityInstance(canvas, config, (progress) => {
+          document.querySelector("#unity-progress-bar-full").style.width = 100 * progress + "%";
+        }).then((unityInstance) => {
+          document.querySelector("#unity-loading-bar").style.display = "none";
+          document.querySelector("#unity-fullscreen-button").onclick = () => {
+            unityInstance.SetFullscreen(1);
+          };
+        }).catch((message) => {
+          alert(message);
+        });
+      };
 
-  <!-- FIM DO TUTORIAL (fase concluída) -->
-  <div class="overlay" id="tut-end">
-    <h2>✅ Fase concluída!</h2>
-    <div class="hint">Mandou bem — você já pegou o básico do dominó.</div>
-    <div class="tut-note">A próxima parte do tutorial será sobre os Jokers.</div>
-    <div>
-      <button id="tut-play">Ir para o jogo ▶</button>
-      <button id="tut-replay">Rever tutorial</button>
-    </div>
-  </div>
-
-  <div class="dbg-hint">F = jokers (debug) · G = config de balanceamento</div>
-
-<script>
-/* ===== jokers de efeito global (ficam a run inteira) ===== */
-const ALL_POWERS=[
-  {id:"cachaca", name:"Cachaça",          desc:"+2 de Mult base.",kind:"power"},
-  {id:"carroca", name:"Carroça Dourada",  desc:"Jogar uma carroça (dupla) dá +3 Mult naquela jogada.",kind:"power"},
-  {id:"mare",    name:"Maré",             desc:"Cada pedra jogada vale +1 Ficha.",kind:"power"},
-  {id:"maocheia",name:"Mão Cheia",        desc:"Toda vez que você esvazia a mão: +1 Mult na fase.",kind:"power"},
-  {id:"file",    name:"Filé da Rendeira", desc:"Pedras com um 6 valem o dobro de Fichas.",kind:"power"},
-  {id:"jangada", name:"Jangada",          desc:"+1 rodada no início de cada fase.",kind:"power"},
-];
-const has=id=>powers.some(p=>p.id===id);
-
-/* ===== JOKERS por tipo de pedra =====
-   Tipos: 0=Branco, 1=Piu, 2=Duque, 3=Terno, 4=Quadra, 5=Quina, 6=Sena.
-   Cada pedra tem 2 metades, então o joker vale se a peça TIVER aquele tipo
-   em pelo menos uma das metades. 2 jokers por tipo = 14 no total.
-   - kind "add":  +5 fichas quando a peça tem o tipo (ex.: cada branco jogado dá +5).
-   - kind "mult": dobra os pontos da jogada quando a peça tem o tipo. */
-const TIPOS=[[0,"Branco"],[1,"Piu"],[2,"Duque"],[3,"Terno"],[4,"Quadra"],[5,"Quina"],[6,"Sena"]];
-const TIPO_JOKERS=[];
-TIPOS.forEach(([n,nome])=>{
-  TIPO_JOKERS.push({id:"add"+n, name:"+5 "+nome,      desc:"+5 fichas se a peça tiver "+n+".",     kind:"add",  tipo:n});
-  TIPO_JOKERS.push({id:"mult"+n,name:nome+" em Dobro",desc:"Dobra os pontos se a peça tiver "+n+".",kind:"mult", tipo:n});
-});
-const tileTem=(t,n)=>t[0]===n||t[1]===n;
-
-/* ===== jokers especiais do GATO POR LEBRE (desbloqueados no 1º resultado) ===== */
-const GATO_JOKERS=[
-  {id:"petisca",name:"Quem não arrisca não petisca",desc:"Quando seu gato por lebre pontua: +2 de Mult naquela jogada.",kind:"special",gatoMult:2},
-  {id:"blefe",  name:"Mestre do Blefe",             desc:"Aumenta a chance do gato por lebre para 50%.",         kind:"special",gatoBonus:0.25},
-];
-/* ===== jokers de EFEITO DE CAMPO (reagem ao estado da mesa) =====
-   "lá e lô" = as duas pontas abertas têm o mesmo número (isLaELo()).
-   "bomba"   = carroça / peça dupla (isDouble()). */
-const CAMPO_JOKERS=[
-  {id:"laelo10",name:"Lá e Lô Premiado",  desc:"Se a sua jogada DEIXAR a mesa em lá e lô (pontas iguais): +10 pontos.",kind:"campo"},
-  {id:"bombalo",name:"Bomba na Maré",     desc:"Jogar uma bomba (carroça) com a mesa já em lá e lô: +5 de Mult.",     kind:"campo"},
-  {id:"lalo5",  name:"Embalo do Lá e Lô", desc:"Jogar qualquer peça com a mesa já em lá e lô: +5 pontos.",            kind:"campo"},
-];
-let unlocked={petisca:false,blefe:false};   // persistem na sessão (não resetam a cada run)
-let pendingUnlocks=[],afterUnlock=null;     // jokers desbloqueados na fase atual → mostrados no fim
-/* desbloqueia um joker (genérico): marca, e guarda pra anunciar no fim da fase */
-function unlock(id){
-  if(unlocked[id])return;
-  unlocked[id]=true;
-  const j=[...GATO_JOKERS,...ALL_POWERS,...TIPO_JOKERS,...CAMPO_JOKERS].find(x=>x.id===id);
-  if(j)pendingUnlocks.push(j);
-}
-/* mostra o modal de desbloqueios (se houver) e DEPOIS roda a ação (loja/fim) */
-function showUnlocksThen(action){
-  if(!pendingUnlocks.length){action();return;}
-  const box=document.getElementById("unlock-items");box.innerHTML="";
-  pendingUnlocks.forEach(j=>{
-    const c=document.createElement("div");c.className="shop-card";
-    c.innerHTML=`<b>${j.name}</b><div class="hint">${j.desc}</div>`;
-    box.appendChild(c);
-  });
-  pendingUnlocks=[];afterUnlock=action;
-  document.getElementById("unlock").classList.add("on");
-}
-function closeUnlock(){
-  document.getElementById("unlock").classList.remove("on");
-  const a=afterUnlock;afterUnlock=null;if(a)a();
-}
-
-/* ===== config de balanceamento (modal tecla G) ===== */
-let CFG={maxJokers:5,maxPoderes:5,lives:3,autoTarget:true,target:100,bossDuque:false,bossCaboclo:false,bossFlorzinha:false};
-const isJokerItem=p=>!!p.kind;            // tudo é joker agora (todos têm "kind"); selos ficam fora do array powers
-const countCat=joker=>powers.filter(p=>!!p.kind===joker).length;
-const limitFor=item=>isJokerItem(item)?CFG.maxJokers:CFG.maxPoderes;
-const catItems=item=>powers.filter(p=>!!p.kind===!!item.kind);
-const bloqueado=t=>CFG.bossDuque&&tileTem(t,2);   // BOSS Duque Travado: pedras com Duque (2) travadas
-/* meta da fase, já com o boss Comadre Florzinha (+50%) se ativo */
-const metaBase=()=>CFG.autoTarget?targetFor(faseIdx):CFG.target;
-const metaAtual=()=>Math.round(metaBase()*(CFG.bossFlorzinha?1.5:1));
-let pendingAdd=null;
-
-/* adiciona um joker/poder respeitando o limite da categoria (sempre grátis).
-   refresh = callback pra atualizar/avançar a tela de origem. */
-function tryAdd(item,refresh){
-  if(countCat(isJokerItem(item))<limitFor(item)){
-    powers.push(item);render();if(refresh)refresh();
-  }else{
-    openLimitModal(item,refresh);
-  }
-}
-function openLimitModal(item,refresh){
-  pendingAdd={item,refresh};
-  const cat=isJokerItem(item)?"jokers":"poderes";
-  document.getElementById("limit-msg").innerHTML=
-    `Limite de <b>${cat}</b> cheio (${countCat(isJokerItem(item))}/${limitFor(item)}). `+
-    `Remova um pra encaixar <b>${item.name}</b>, ou descarte a compra.`;
-  const box=document.getElementById("limit-items");box.innerHTML="";
-  catItems(item).forEach(p=>{
-    const c=document.createElement("div");c.className="shop-card";
-    c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
-    const b=document.createElement("button");b.textContent="Remover este";
-    b.onclick=()=>resolveLimit(p);
-    c.appendChild(b);box.appendChild(c);
-  });
-  document.getElementById("limit").classList.add("on");
-}
-function resolveLimit(removeItem){
-  const i=powers.indexOf(removeItem);if(i>=0)powers.splice(i,1);
-  powers.push(pendingAdd.item);
-  const r=pendingAdd.refresh;pendingAdd=null;
-  document.getElementById("limit").classList.remove("on");
-  render();if(r)r();
-}
-function discardLimit(){
-  pendingAdd=null;
-  document.getElementById("limit").classList.remove("on");
-}
-
-/* ===== fases (com sabor alagoano) ===== */
-const FASES=[
-  {nome:"A Maré de Pajuçara"},
-  {nome:"O Sururu da Lagoa Mundaú"},
-  {nome:"A Jangada da Praia do Francês"},
-  {nome:"O Farol da Ponta Verde"},
-  {nome:"O Cânion do São Francisco"},
-  {nome:"A Feira de Maceió"},
-];
-const HAND_SIZE=7;
-
-let monte,hand,selected,faseIdx,target,score,lives,powers,emptyBonus,tilesThisHand,board,over,faseOver;
-
-/* ===== setup ===== */
-function fullSet(){const t=[];for(let a=0;a<=6;a++)for(let b=a;b<=6;b++)t.push([a,b]);return t;}
-function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
-function targetFor(i){return Math.round(40*Math.pow(1.6,i));}
-function curFase(){return FASES[Math.min(faseIdx,FASES.length-1)];}
-function isBoss(){return !!curFase().boss;}
-
-function newGame(){faseIdx=0;powers=[];pendingUnlocks=[];afterUnlock=null;document.getElementById("end").classList.remove("on");startFase();}
-function startFase(){
-  monte=shuffle(fullSet());
-  hand=monte.splice(0,HAND_SIZE);
-  board=[];selected=null;over=false;faseOver=false;
-  score=0;emptyBonus=0;tilesThisHand=0;gatoTravado=false;
-  target=metaAtual();
-  lives=CFG.lives+(has("jangada")?1:0);
-  setStatus("");
-  render();
-}
-
-/* ===== dominó (mesa reta, 2 pontas) ===== */
-function pontaEsq(){return board.length?board[0][0]:null;}
-function pontaDir(){return board.length?board[board.length-1][1]:null;}
-function ondePodeJogar(t){
-  if(board.length===0)return{esq:true,dir:true};
-  const[a,b]=t,le=pontaEsq(),re=pontaDir();
-  return{esq:a===le||b===le,dir:a===re||b===re};
-}
-function temJogada(){return hand.some(t=>{if(bloqueado(t))return false;const p=ondePodeJogar(t);return p.esq||p.dir;});}
-function colocar(t,lado){
-  if(board.length===0){board.push([t[0],t[1]]);return;}
-  const[a,b]=t;
-  if(lado==="esq"){const le=pontaEsq();board.unshift(b===le?[a,b]:[b,a]);}
-  else{const re=pontaDir();board.push(a===re?[a,b]:[b,a]);}
-}
-function isDouble(t){return t[0]===t[1];}
-/* "lá e lô": as duas pontas abertas mostram o mesmo número (mesa precisa ter peça) */
-function isLaELo(){return board.length>0&&pontaEsq()===pontaDir();}
-
-/* ===== mult atual (base, mostrado no HUD) ===== */
-function baseMult(){return 1+(has("cachaca")?2:0)+emptyBonus;}
-
-/* calcula e aplica a pontuação de uma peça jogada; retorna {ganho,chips,mult} */
-function pontuar(t,viaGato,laEloBefore){
-  const laEloAfter=isLaELo();                                           // estado da mesa DEPOIS de encaixar
-  let chips=t[0]+t[1];
-  if(has("file")&&(t[0]===6||t[1]===6))chips*=2;
-  if(has("mare"))chips+=1;
-  powers.forEach(p=>{if(p.kind==="add"&&tileTem(t,p.tipo))chips+=5;});   // jokers +5 por tipo
-  let mult=baseMult();
-  if(has("carroca")&&isDouble(t))mult+=3;
-  if(has("bombalo")&&isDouble(t)&&laEloBefore)mult+=5;                  // CAMPO: bomba com mesa em lá e lô → +5 Mult
-  if(viaGato)powers.forEach(p=>{if(p.gatoMult)mult+=p.gatoMult;});       // joker: gato por lebre dá +Mult
-  let ganho=chips*mult;
-  powers.forEach(p=>{if(p.kind==="mult"&&tileTem(t,p.tipo))ganho*=2;});  // jokers x2 por tipo
-  if(has("lalo5")&&laEloBefore)ganho+=5;                                // CAMPO: peça com mesa já em lá e lô → +5 pontos
-  if(has("laelo10")&&laEloAfter)ganho+=10;                              // CAMPO: jogada deixou a mesa em lá e lô → +10 pontos
-  if((CFG.bossCaboclo||CFG.bossFlorzinha)&&tilesThisHand===1)ganho=0;    // Boss Mau-Olhado (zera tudo)
-  score+=ganho;
-  return {ganho,chips,mult};
-}
-
-/* ===== jogar uma pedra ===== */
-function clicarPeca(idx){
-  if(over||faseOver)return;
-  const t=hand[idx];
-  if(bloqueado(t))return;              // boss: pedra com Duque não pode ser jogada
-  const p=ondePodeJogar(t);
-  if(!p.esq&&!p.dir){if(!gatoTravado)abrirGato(idx);return;}   // não encaixa → trocar gato por lebre (trava após falhar)
-  selected=idx;render();
-  if(p.esq&&p.dir&&board.length>0){
-    const div=document.getElementById("endbtns");div.innerHTML="";
-    const be=document.createElement("button");be.textContent="◀ Esquerda";be.onclick=()=>jogar(idx,"esq");
-    const bd=document.createElement("button");bd.textContent="Direita ▶";bd.onclick=()=>jogar(idx,"dir");
-    div.appendChild(be);div.appendChild(bd);
-  }else jogar(idx,p.esq?"esq":"dir");
-}
-function jogar(idx,lado){
-  document.getElementById("endbtns").innerHTML="";
-  const t=hand.splice(idx,1)[0];
-  const laElo=isLaELo();                 // mesa em lá e lô ANTES de encaixar (p/ jokers de campo)
-  colocar(t,lado);selected=null;tilesThisHand++;
-
-  // pontuação: fichas × mult
-  const r=pontuar(t,false,laElo);
-  if(r.ganho>0)flash("+"+r.ganho+"  ("+r.chips+" × "+r.mult+")");
-  else flash("Mau-olhado! 0",true);
-
-  if(score>=target)return winFase();
-
-  // REGRA-CHAVE: esvaziou a mão → mão nova de graça
-  if(hand.length===0){
-    if(has("maocheia"))emptyBonus++;
-    const novas=monte.splice(0,HAND_SIZE);
-    hand.push(...novas);tilesThisHand=0;
-    flash("MÃO LIMPA! +mão grátis 🎉",true);
-  }
-  render();
-  checkTravou();
-}
-
-/* ===== trocar gato por lebre (jogar peça que NÃO encaixa) ===== */
-let gatoIdx=null,gatoTravado=false;   // gatoTravado: trava o gato pelo resto da fase após falhar
-function gatoChance(){
-  let c=0.25;                                           // base 25%
-  powers.forEach(p=>{if(p.gatoBonus)c+=p.gatoBonus;});  // jokers/selos futuros somam aqui
-  return Math.min(1,c);
-}
-function abrirGato(idx){
-  if(over||faseOver||gatoTravado)return;
-  gatoIdx=idx;
-  const t=hand[idx],pct=Math.round(gatoChance()*100);
-  document.getElementById("gato-msg").innerHTML=
-    `A pedra <b>[${t[0]}|${t[1]}]</b> não encaixa em nenhuma ponta. Escolha a ponta pra colar.<br>`+
-    `Chance de colar a mentira: <b>${pct}%</b>.<br>`+
-    `Se falhar: perde <b>METADE</b> dos pontos (${score} → ${Math.floor(score/2)}) <b>e</b> não pode mais trocar nesta fase.`;
-  document.getElementById("gato-esq").textContent="◀ Esquerda ("+pct+"%)";
-  document.getElementById("gato-dir").textContent="Direita ▶ ("+pct+"%)";
-  document.getElementById("gato").classList.add("on");
-}
-function cancelarGato(){gatoIdx=null;document.getElementById("gato").classList.remove("on");}
-function confirmarGato(lado){
-  const idx=gatoIdx;gatoIdx=null;
-  document.getElementById("gato").classList.remove("on");
-  if(idx==null)return;
-  const t=hand[idx];
-  if(tutorial){
-    // tutorial: sucesso garantido, sem desbloqueio de joker
-    hand.splice(idx,1);
-    if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
-    const step=TUT_STEPS[tutStep];
-    if(step.win){tutFinishPhase(t);return;}                  // passo da meta: gato sucesso → conclui a fase
-    flash("Colou! 🐱→🐇",true);
-    tutStep++;showTutStep();
-    return;
-  }
-  if(over||faseOver)return;
-  if(Math.random()<gatoChance()){
-    // SUCESSO: a peça "cola" na ponta escolhida mesmo sem encaixar
-    const laElo=isLaELo();                 // mesa em lá e lô ANTES de colar (p/ jokers de campo)
-    hand.splice(idx,1);
-    if(lado==="esq")board.unshift([t[0],t[1]]);else board.push([t[0],t[1]]);
-    selected=null;tilesThisHand++;
-    const r=pontuar(t,true,laElo);   // viaGato → ativa jokers de blefe (petisca dá +Mult)
-    flash(r.ganho>0?("Colou! +"+r.ganho+" 🐱→🐇"):"Colou! 🐱→🐇",true);
-    unlock("blefe");   // 1º sucesso desbloqueia o Mestre do Blefe (anunciado no fim da fase)
-    if(score>=target){render();return winFase();}
-    if(hand.length===0){
-      if(has("maocheia"))emptyBonus++;
-      hand.push(...monte.splice(0,HAND_SIZE));tilesThisHand=0;
-      flash("MÃO LIMPA! +mão grátis 🎉",true);
-    }
-    render();checkTravou();
-  }else{
-    // FALHA: perde metade dos pontos E trava o gato pelo resto da fase
-    score=Math.floor(score/2);gatoTravado=true;
-    flash("Pegou no flagra! −50% dos pontos 😿",true);
-    setStatus("Gato por lebre falhou — perdeu metade dos pontos e não pode mais trocar nesta fase.");
-    unlock("petisca");   // 1ª falha desbloqueia o Quem não arrisca não petisca (anunciado no fim da fase)
-    render();
-  }
-}
-
-/* ===== comprar (punido): −1 rodada ===== */
-function comprar(){
-  if(tutorial){tutDraw();return;}
-  if(over||faseOver||monte.length===0||lives<=0)return;
-  lives--;
-  hand.push(monte.shift());
-  setStatus("Você comprou — perdeu 1 rodada!");
-  render();
-  if(lives<=0&&!temJogada())checkTravou();
-}
-
-/* ===== travou? (sem jogada) ===== */
-function checkTravou(){
-  if(over||faseOver)return;
-  if(temJogada())return;
-  // não tem jogada na mão
-  if(monte.length>0&&lives>0){
-    setStatus("Sem encaixe! Compre do monte (−1 rodada) ou tente trocar gato por lebre (peça vermelha).");
-  }else{
-    loseFase(lives<=0?"Acabaram as rodadas!":"Monte vazio e sem encaixe!");
-  }
-}
-
-/* ===== fim de fase ===== */
-function winFase(){
-  faseOver=true;render();
-  setTimeout(()=>showUnlocksThen(()=>openShop("✅ "+curFase().nome.replace(/^⚔ CHEFE — /,"")+" — meta batida!")),700);
-}
-function loseFase(motivo){
-  over=true;render();
-  showUnlocksThen(()=>{
-    document.getElementById("end-title").textContent="🐴 Fim da run!";
-    document.getElementById("end-msg").innerHTML=`${motivo}<br>Você chegou à <b>fase ${faseIdx+1}</b> (${curFase().nome}) com ${score}/${target} pontos.`;
-    document.getElementById("end").classList.add("on");
-  });
-}
-
-/* ===== recompensa pós-fase: escolha 1 joker grátis de 3 ===== */
-function openShop(titulo){
-  const extra=GATO_JOKERS.filter(j=>unlocked[j.id]);   // só aparecem depois de desbloquear
-  const pool=shuffle(ALL_POWERS.concat(TIPO_JOKERS,CAMPO_JOKERS,extra).filter(p=>!has(p.id))).slice(0,3);
-  document.getElementById("shop-title").textContent="🎁 "+titulo;
-  const box=document.getElementById("shop-items");box.innerHTML="";
-  if(pool.length===0)box.innerHTML='<div class="hint">Você já tem tudo!</div>';
-  pool.forEach(p=>{
-    const c=document.createElement("div");c.className="shop-card";
-    c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
-    const b=document.createElement("button");
-    b.textContent="Escolher";
-    b.onclick=()=>tryAdd(p,nextFase);   // grátis: ao escolher, segue pra próxima fase
-    c.appendChild(b);box.appendChild(c);
-  });
-  document.getElementById("shop").classList.add("on");
-}
-function nextFase(){document.getElementById("shop").classList.remove("on");faseIdx++;startFase();}
-
-/* ===== visual ===== */
-function dom(a,b,cls=""){return `<div class="domino ${cls}"><div class="half">${a}</div><div class="half">${b}</div></div>`;}
-function setStatus(t){document.getElementById("status").textContent=t;}
-function flash(txt,big){const f=document.getElementById("float");f.textContent=txt;f.style.color=big?"#d34b45":"#c9962a";
-  f.classList.remove("go");void f.offsetWidth;f.classList.add("go");}
-
-function render(){
-  // pontinhos da fase no canto (fase 1 = 1 pontinho, fase 2 = 2...)
-  document.getElementById("fasedots").innerHTML=
-    Array.from({length:faseIdx+1},()=>'<span class="dot"></span>').join("");
-
-  const bosses=[];
-  if(CFG.bossCaboclo)bosses.push("Caboclo d'Água");
-  if(CFG.bossFlorzinha)bosses.push("Comadre Florzinha");
-  if(CFG.bossDuque)bosses.push("Duque travado");
-  document.getElementById("opp-name").innerHTML=bosses.length?("👹 BOSS<br>"+bosses.join("<br>+ ")):"A LENDA<br>te observa…";
-  document.getElementById("target").textContent=target;
-  document.getElementById("score").textContent=score;
-  document.getElementById("mult").textContent=baseMult();
-  document.getElementById("lives").textContent=lives;
-  document.getElementById("boneyard-count").textContent=monte.length;
-  document.getElementById("jokers").innerHTML=powers.filter(isJokerItem).map(p=>`<div class="joker"><b>${p.name}</b>${p.desc}</div>`).join("");
-  document.getElementById("selos").innerHTML=powers.filter(p=>!isJokerItem(p)).map(p=>`<div class="joker"><b>${p.name}</b>${p.desc}</div>`).join("");
-
-  document.getElementById("board").innerHTML=board.length?board.map(t=>dom(t[0],t[1])).join(""):'<span style="color:#aaa">(vazia — jogue qualquer pedra)</span>';
-  const ed=document.getElementById("ends");
-  ed.innerHTML=board.length?`Pontas abertas: <b>${pontaEsq()}</b> (esq) e <b>${pontaDir()}</b> (dir)`:"";
-
-  const yh=document.getElementById("your-hand");yh.innerHTML="";
-  hand.forEach((t,i)=>{
-    let cls;
-    if(tutorial){
-      cls=tutCls(TUT_STEPS[tutStep],t);
-    }else{
-      const p=ondePodeJogar(t);
-      if(over||faseOver||bloqueado(t))cls="dead";    // boss/fim: cinza, sem ação
-      else if(p.esq||p.dir)cls="playable";           // encaixa: contorno amarelo
-      else cls=gatoTravado?"dead":"gato";            // não encaixa: vermelho (gato), ou cinza se já falhou
-      if(i===selected)cls+=" selected";
-    }
-    const w=document.createElement("div");w.innerHTML=dom(t[0],t[1],cls);
-    const el=w.firstChild;el.onclick=()=>tutorial?clicarPecaTut(i):clicarPeca(i);yh.appendChild(el);
-  });
-
-  document.getElementById("draw").disabled=tutorial?!TUT_STEPS[tutStep].draw:(over||faseOver||monte.length===0||lives<=0);
-}
-
-/* ===== TUTORIAL (falas no topo da mesa) ===== */
-let tutorial=false,tutStep=0;
-const TUT_HAND=[[3,3],[3,5],[5,4],[0,0],[1,0]];
-const TUT_STEPS=[
-  // 0 — jogue a 3/5
-  {text:"Opa, ta familiarizado com dominó? Não? Eu em... Vamos lá. Primeiro jogue uma das pedras em sua mão, vamos começar com essa.",
-   play:[[3,5]]},
-  // 1 — ligue metades correspondentes (3/3 e 5/4)
-  {text:"Certo! Note como cada pedra contem 2 numeros... Agora vamos ligar essas metades com outras pedras com metades correspondentes.",
-   play:[[3,3],[5,4]]},
-  // 2 — joga a outra que encaixa
-  {text:"Ok... Você ta pegando o jeito, agora faz a próxima jogada.",
-   play:"match", block:true},
-  // 3 — sem opções: compre do monte (vem a 1/1; rodadas=1)
-  {text:"Oh... Veja, estamos sem opções, hm... Certo, vamos comprar do monte! Comprar do monte custa uma rodada, quando suas rodadas chegam a zero, caso você não tenha mais opções para jogar, você perde! Vamos ver o que vem...",
-   draw:true, block:true},
-  // 4 — tudo ou nada: gato por lebre (sucesso garantido, sem desbloqueio)
-  {text:"Ok, agora é tudo ou nada! Vamos tentar blefar, ou como meu voinho diria, trocar gato por lebre.",
-   gato:[[0,0],[1,1]], block:true},
-  // 5 — esvazie a mão (joga 1/0 e depois a última limpa a mão = compra grátis)
-  {text:"UOU! ISSO FOI DO BARALHO! Agora vamos esvaziar nossa mão. Sempre que esvaziamos nossa mão, compramos do monte sem gastar rodadas!",
-   play:"match", block:true, empty:true},
-  // 6 — a meta aparece (27) com 26 pontos; qualquer jogada conclui a fase
-  {text:"Ufa, limpamos a mão, mas opa! Notou aquela meta ali? Quando superamos a meta, a fase é concluida, vamos tentar completar ela com o que fizemos até agora!",
-   win:true, setup:()=>{target=27;score=26;hand=[[6,6],[3,2],[4,1]];selected=null;}},
-];
-const sameTile=(t,p)=>(t[0]===p[0]&&t[1]===p[1])||(t[0]===p[1]&&t[1]===p[0]);
-const isGatoPiece=(step,t)=>!!step.gato&&step.gato.some(p=>sameTile(t,p));
-function tutPlayable(step,t){
-  if(step.play==="match"){const p=ondePodeJogar(t);return p.esq||p.dir;}
-  if(Array.isArray(step.play))return step.play.some(p=>sameTile(t,p));
-  return false;
-}
-/* classe visual da peça no tutorial: azul (jogável), vermelho (gato), cinza (travada) ou normal */
-function tutCls(step,t){
-  if(step.win){const p=ondePodeJogar(t);return (p.esq||p.dir)?"tut":"gato";}  // azul (encaixa) ou vermelho (gato)
-  if(isGatoPiece(step,t))return "gato";
-  if(step.play==="match")return tutPlayable(step,t)?"tut":"";
-  if(Array.isArray(step.play))return tutPlayable(step,t)?"tut":"dead";
-  return "dead";
-}
-function startTutorial(){
-  tutorial=true;tutStep=0;faseIdx=0;
-  monte=[];hand=TUT_HAND.map(t=>t.slice());board=[];selected=null;over=false;faseOver=false;
-  score=0;target=0;lives=1;powers=[];emptyBonus=0;tilesThisHand=0;gatoTravado=false;
-  pendingUnlocks=[];afterUnlock=null;
-  document.getElementById("end").classList.remove("on");
-  showTutStep();
-}
-function showTutStep(){const step=TUT_STEPS[tutStep];if(step.setup)step.setup();setStatus(step.text);render();}
-function clicarPecaTut(idx){
-  const step=TUT_STEPS[tutStep],t=hand[idx];
-  if(step.win){                                              // passo da meta: qualquer jogada conclui
-    const p=ondePodeJogar(t);
-    if(p.esq||p.dir){hand.splice(idx,1);colocar(t,p.esq?"esq":"dir");tutFinishPhase(t);}
-    else abrirGato(idx);                                     // não encaixa → gato (sucesso garantido)
-    return;
-  }
-  if(isGatoPiece(step,t)){abrirGato(idx);return;}            // vermelho → modal do gato (sucesso garantido no tutorial)
-  if(tutPlayable(step,t)){tutPlayPiece(idx,step);return;}
-  if(step.block)flash("Bloqueado!",true);
-}
-function tutPlayPiece(idx,step){
-  const t=hand[idx],p=ondePodeJogar(t);
-  const lado=board.length===0?"dir":(p.esq?"esq":"dir");
-  hand.splice(idx,1);colocar(t,lado);
-  if(step.empty){
-    if(hand.length===0){
-      flash("MÃO LIMPA! Compra grátis 🎉",true);
-      tutStep++;
-      if(tutStep>=TUT_STEPS.length){render();setTimeout(endTutorial,900);return;}
-      render();setTimeout(showTutStep,900);return;            // avança pro passo da meta
-    }
-    render();return;                                          // continua no passo até esvaziar a mão
-  }
-  tutStep++;
-  if(tutStep>=TUT_STEPS.length)return endTutorial();
-  showTutStep();
-}
-function tutDraw(){
-  const step=TUT_STEPS[tutStep];
-  if(!step.draw)return;
-  hand.push([1,1]);   // a peça que vem é a 1/1
-  lives--;            // a compra custa 1 rodada (1 → 0)
-  tutStep++;          // → passo do gato
-  showTutStep();
-}
-function tutFinishPhase(t){
-  pontuar(t);                       // soma os pontos da peça (26 + pontos da jogada)
-  if(score<target)score=target;     // garante a vitória ("qualquer peça serve")
-  render();
-  flash("FASE CONCLUÍDA! 🎉",true);
-  setTimeout(()=>document.getElementById("tut-end").classList.add("on"),1000);  // abre a tela de conclusão
-}
-function endTutorial(){tutorial=false;newGame();}  // acaba o tutorial → começa o jogo normal do jeito que está
-
-/* ===== debug: adicionar jokers com a tecla F ===== */
-function buildDebug(){
-  const box=document.getElementById("debug-items");box.innerHTML="";
-  ALL_POWERS.concat(TIPO_JOKERS,CAMPO_JOKERS,GATO_JOKERS).forEach(p=>{
-    const c=document.createElement("div");c.className="shop-card";
-    c.innerHTML=`<b>${p.name}</b><div class="hint">${p.desc}</div>`;
-    const b=document.createElement("button");b.textContent="Adicionar";
-    b.onclick=()=>tryAdd(p,null);
-    c.appendChild(b);box.appendChild(c);
-  });
-}
-function toggleDebug(){document.getElementById("debug").classList.toggle("on");}
-
-/* ===== config de balanceamento (modal tecla G) ===== */
-function openConfig(){
-  document.getElementById("cfg-jokers").value=CFG.maxJokers;
-  document.getElementById("cfg-poderes").value=CFG.maxPoderes;
-  document.getElementById("cfg-lives").value=CFG.lives;
-  document.getElementById("cfg-auto").checked=CFG.autoTarget;
-  document.getElementById("cfg-target").value=CFG.target;
-  document.getElementById("cfg-target").disabled=CFG.autoTarget;
-  document.getElementById("cfg-caboclo").checked=CFG.bossCaboclo;
-  document.getElementById("cfg-florzinha").checked=CFG.bossFlorzinha;
-  document.getElementById("cfg-boss").checked=CFG.bossDuque;
-  document.getElementById("config").classList.add("on");
-}
-function toggleConfig(){
-  const el=document.getElementById("config");
-  if(el.classList.contains("on"))el.classList.remove("on");else openConfig();
-}
-function applyConfig(){
-  CFG.maxJokers =Math.max(1,+document.getElementById("cfg-jokers").value ||CFG.maxJokers);
-  CFG.maxPoderes=Math.max(1,+document.getElementById("cfg-poderes").value||CFG.maxPoderes);
-  CFG.lives     =Math.max(1,+document.getElementById("cfg-lives").value  ||CFG.lives);
-  CFG.autoTarget=document.getElementById("cfg-auto").checked;
-  CFG.target    =Math.max(1,+document.getElementById("cfg-target").value ||CFG.target);
-  CFG.bossCaboclo =document.getElementById("cfg-caboclo").checked;
-  CFG.bossFlorzinha=document.getElementById("cfg-florzinha").checked;
-  CFG.bossDuque   =document.getElementById("cfg-boss").checked;
-  // aplica já na fase atual pra testar na hora
-  lives=CFG.lives+(has("jangada")?1:0);
-  target=metaAtual();
-  render();
-  document.getElementById("config").classList.remove("on");
-}
-
-document.addEventListener("keydown",e=>{
-  if(e.target&&e.target.tagName==="INPUT")return;
-  const k=e.key.toLowerCase();
-  if(k==="f")toggleDebug();
-  else if(k==="g")toggleConfig();
-});
-document.getElementById("debug-close").onclick=toggleDebug;
-document.getElementById("cfg-apply").onclick=applyConfig;
-document.getElementById("cfg-auto").onchange=e=>{document.getElementById("cfg-target").disabled=e.target.checked;};
-document.getElementById("limit-discard").onclick=discardLimit;
-document.getElementById("gato-esq").onclick=()=>confirmarGato("esq");
-document.getElementById("gato-dir").onclick=()=>confirmarGato("dir");
-document.getElementById("gato-no").onclick=cancelarGato;
-document.getElementById("unlock-ok").onclick=closeUnlock;
-document.getElementById("tut-play").onclick=()=>{document.getElementById("tut-end").classList.remove("on");endTutorial();};
-document.getElementById("tut-replay").onclick=()=>{document.getElementById("tut-end").classList.remove("on");startTutorial();};
-
-document.getElementById("draw").onclick=comprar;
-document.getElementById("next").onclick=nextFase;
-document.getElementById("restart").onclick=newGame;
-buildDebug();
-startTutorial();
-</script>
-</body>
+      document.body.appendChild(script);
+    </script>
+  </body>
 </html>
