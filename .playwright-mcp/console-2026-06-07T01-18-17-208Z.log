@@ -1,0 +1,120 @@
+[     285ms] [LOG] You can reduce startup time if you configure your web server to add "Content-Encoding: gzip" response header when serving "Build/gamejam-neon2026.framework.js.unityweb" file. @ http://127.0.0.1:8099/Build/gamejam-neon2026.loader.js:0
+[     422ms] [LOG] You can reduce startup time if you configure your web server to add "Content-Encoding: gzip" response header when serving "Build/gamejam-neon2026.wasm.unityweb" file. @ http://127.0.0.1:8099/Build/gamejam-neon2026.loader.js:0
+[     492ms] [LOG] You can reduce startup time if you configure your web server to add "Content-Encoding: gzip" response header when serving "Build/gamejam-neon2026.data.unityweb" file. @ http://127.0.0.1:8099/Build/gamejam-neon2026.loader.js:0
+[     527ms] [LOG] [UnityCache] 'http://127.0.0.1:8099/Build/gamejam-neon2026.data.unityweb' successfully downloaded and stored in the browser cache @ http://127.0.0.1:8099/Build/gamejam-neon2026.loader.js:0
+[    2607ms] [LOG] [UnityMemory] Configuration Parameters - Can be set up in boot.config
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2609ms] [LOG]     "memorysetup-allocator-temp-initial-block-size-main=262144"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2611ms] [LOG]     "memorysetup-allocator-temp-initial-block-size-worker=262144"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2613ms] [LOG]     "memorysetup-temp-allocator-size-audio-worker=65536"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2614ms] [LOG]     "memorysetup-temp-allocator-size-background-worker=32768"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2615ms] [LOG]     "memorysetup-bucket-allocator-granularity=16"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2615ms] [LOG]     "memorysetup-bucket-allocator-bucket-count=8"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2616ms] [LOG]     "memorysetup-bucket-allocator-block-size=4194304"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2617ms] [LOG]     "memorysetup-bucket-allocator-block-count=1"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2620ms] [LOG]     "memorysetup-main-allocator-block-size=16777216"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2624ms] [LOG]     "memorysetup-thread-allocator-block-size=16777216"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2625ms] [LOG]     "memorysetup-gfx-main-allocator-block-size=16777216"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2626ms] [LOG]     "memorysetup-gfx-thread-allocator-block-size=16777216"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2636ms] [LOG]     "memorysetup-cache-allocator-block-size=4194304"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2637ms] [LOG]     "memorysetup-typetree-allocator-block-size=2097152"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2638ms] [LOG]     "memorysetup-profiler-bucket-allocator-granularity=16"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2639ms] [LOG]     "memorysetup-profiler-bucket-allocator-bucket-count=8"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2642ms] [LOG]     "memorysetup-profiler-bucket-allocator-block-size=4194304"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2643ms] [LOG]     "memorysetup-profiler-bucket-allocator-block-count=1"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2644ms] [LOG]     "memorysetup-profiler-allocator-block-size=16777216"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2644ms] [LOG]     "memorysetup-profiler-editor-allocator-block-size=1048576"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2645ms] [LOG]     "memorysetup-temp-allocator-size-main=4194304"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2647ms] [LOG]     "memorysetup-job-temp-allocator-block-size=2097152"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2648ms] [LOG]     "memorysetup-job-temp-allocator-block-size-background=1048576"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    2649ms] [LOG]     "memorysetup-job-temp-allocator-reduction-small-platforms=262144"
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3062ms] [LOG] Input System module state changed to: Initialized.
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3075ms] [LOG] [Physics::Module] Initialized fallback backend.
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3076ms] [LOG] [Physics::Module] Id: 0xdecafbad
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3083ms] [LOG] Loading player data from data.unity3d
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3116ms] [LOG] Initialize engine version: 6000.3.6f1 (bbb010bdb8a3)
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3118ms] [LOG] [Subsystems] Discovering subsystems at path UnitySubsystems
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3131ms] [LOG] Creating WebGL 2.0 context. @ http://127.0.0.1:8099/Build/gamejam-neon2026.loader.js:0
+[    3354ms] [LOG] Renderer: WebKit WebGL
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3355ms] [LOG] Vendor:   WebKit
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3356ms] [LOG] Version:  OpenGL ES 3.0 (WebGL 2.0 (OpenGL ES 3.0 Chromium))
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3356ms] [LOG] GLES:     3
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3358ms] [LOG]  EXT_clip_control EXT_color_buffer_float EXT_color_buffer_half_float EXT_conservative_depth EXT_depth_clamp EXT_disjoint_timer_query_webgl2 EXT_float_blend EXT_polygon_offset_clamp EXT_render_snorm EXT_texture_compression_bptc EXT_texture_compression_rgtc EXT_texture_filter_anisotropic EXT_texture_mirror_clamp_to_edge EXT_texture_norm16 KHR_parallel_shader_compile NV_shader_noperspective_interpolation OES_draw_buffers_indexed OES_sample_variables OES_shader_multisample_interpolation OES_texture_float_linear OVR_multiview2 WEBGL_blend_func_extended WEBGL_clip_cull_distance WEBGL_compressed_texture_s3tc WEBGL_compressed_texture_s3tc_srgb WEBGL_debug_renderer_info WEBGL_debug_shaders WEBGL_lose_context WEBGL_multi_draw WEBGL_polygon_mode WEBGL_provoking_vertex WEBGL_stencil_texturing GL_EXT_clip_control GL_EXT_color_buffer_float GL_EXT_color_buffer_half_float GL_EXT_conservative_depth GL_EXT_depth_clamp GL_EXT_disjoint_timer_query_webgl2 GL_EXT_float_blend GL_EXT_polygon_offset_clamp GL_EXT_render_snorm GL_EXT_
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3359ms] [LOG] texture_compression_bptc GL_EXT_texture_compression_rgtc GL_EXT_texture_filter_anisotropic GL_EXT_texture_mirror_clamp_to_edge GL_EXT_texture_norm16 GL_KHR_parallel_shader_compile GL_NV_shader_noperspective_interpolation GL_OES_draw_buffers_indexed GL_OES_sample_variables GL_OES_shader_multisample_interpolation GL_OES_texture_float_linear GL_OVR_multiview2 GL_WEBGL_blend_func_extended GL_WEBGL_clip_cull_distance GL_WEBGL_compressed_texture_s3tc GL_WEBGL_compressed_texture_s3tc_srgb GL_WEBGL_debug_renderer_info GL_WEBGL_debug_shaders GL_WEBGL_lose_context GL_WEBGL_multi_draw GL_WEBGL_polygon_mode GL_WEBGL_provoking_vertex GL_WEBGL_stencil_texturing
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3390ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3391ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3392ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3409ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3410ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3411ms] [WARNING] WebGL: INVALID_ENUM: getInternalformatParameter: invalid internalformat @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3448ms] [LOG] OPENGL LOG: Creating OpenGL ES 3.0 graphics device ; Context level  <OpenGL ES 3.0> ; Context handle 1
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3888ms] [LOG] [Physics::Module] Selected backend.
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3889ms] [LOG] [Physics::Module] Name: PhysX
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3889ms] [LOG] [Physics::Module] Id: 0xf2b8ea05
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3890ms] [LOG] [Physics::Module] SDK Version: 4.1.2
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3891ms] [LOG] [Physics::Module] Integration Version: 1.0.0
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    3893ms] [LOG] [Physics::Module] Threading Mode: Single-Threaded
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    4306ms] [LOG] ERROR: Shader  @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    4307ms] [LOG] Hidden/CoreSRP/CoreCopy shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    4409ms] [LOG] ERROR: Shader  @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    4409ms] [LOG] Hidden/Universal/HDRDebugView shader is not supported on this GPU (none of subshaders/fallbacks are suitable)
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    4692ms] [LOG] Input System initialize...
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    6147ms] [LOG] UnloadTime: 14.600000 ms
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[    6321ms] [LOG] Audio context resumed after 2.749 seconds. @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[   79953ms] [WARNING] Manual synchronization of Unity Application.persistentDataPath via JS_FileSystem_Sync() is deprecated and will be later removed in a future Unity version. The persistent data directory will be automatically synchronized instead on file modification. Pass config.autoSyncPersistentDataPath = true; to configuration in createUnityInstance() to opt in to the new behavior. @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[   81442ms] [LOG] UnloadTime: 2.500000 ms
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[   81445ms] [LOG] Unloading 4 Unused Serialized files (Serialized files now loaded: 0)
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[   81453ms] [LOG] Unloading 3 unused Assets to reduce memory usage. Loaded Objects now: 3010.
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
+[   81453ms] [LOG] Total: 7.299999 ms (FindLiveObjects: 0.200000 ms CreateObjectMapping: 0.300000 ms MarkObjects: 6.799999 ms  DeleteObjects: 0.000000 ms)
+
+ @ blob:http://127.0.0.1:8099/4eed0621-b6d5-4fb3-8c3a-3ce754787918:8
